@@ -1,0 +1,554 @@
+---
+title: "Workshop: Statistik mit R"
+author: "Johanna Cronenberg"
+date: "Dezember 2020"
+output: 
+  html_document:
+    number_sections: TRUE
+    toc: true
+    theme: flatly
+    highlight: pygments
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<style>
+div.green {background-color: #ecffeb; border-radius: 5px; padding: 20px;}
+</style>
+
+# Preliminaries
+
+## Setup
+
+- Laden Sie die [Statistik-Software R](https://ftp.fau.de/cran/) herunter und installieren Sie sie. Die aktuellste Version ist `4.0.x`.
+
+- Laden Sie außerdem [RStudio](https://rstudio.com/products/rstudio/download/#download) herunter und installieren Sie es.
+
+- Schauen Sie sich ggf. diese [kurze Einführung in RStudio](https://www.youtube.com/watch?v=tyvEHQszZJs) an.
+
+- Installieren Sie die folgenden Packages (und updaten Sie alle bislang installierten Packages, s. letzter Punkt in dieser Aufzählung):
+
+```{r, eval = F}
+install.packages(c("Rcpp", "rmarkdown", "gridExtra", "tidyverse", "rlang", "magrittr", "lme4", "lmerTest", "ez", "emmeans", "broom"), dependencies = T)
+```
+
+- Sollte der obige Befehl den Fehler `installation of package had non-zero exit status` werfen, hat die Installation nicht geklappt. Für Windows kann es sein, dass Sie in diesem Fall zusätzlich [Rtools](https://cran.r-project.org/bin/windows/Rtools/) installieren müssen. Für MacOS müssen Sie ggf. die *XCode command-line tools* installieren und/oder resetten. Öffnen Sie dafür ein Mac Terminal und führen Sie folgende Befehle aus:
+
+```{bash, eval = F}
+xcode-select --install
+# Falls die Installation der R Packages dann immer noch nicht klappt:
+xcode-select --reset
+```
+
+- Laden Sie anschließend die folgenden Packages:
+
+```{r, warning = F, message = F}
+library(tidyverse)
+library(magrittr)
+library(broom)
+library(ez)
+library(lmerTest)
+library(emmeans)
+```
+
+- Bitte überprüfen Sie regelmäßig, ob Ihre Packages Updates benötigen -- die Updates werden in R nicht automatisch eingespielt! Klicken Sie hierfür in der Werkzeugleiste auf `Tools > Check for Package Updates`. Auch RStudio selbst erhält ab und zu Updates, dies können Sie überprüfen mit `Help > Check for Updates`. Sie sollten außerdem stets mit der neuesten R Version arbeiten, das ist derzeit `4.0.x` (Stand: 15. November 2020). Sie können Ihre R Version überprüfen mit `getRversion()`. Besuchen Sie einfach in regelmäßigen Abständen die [R Webseite](https://ftp.fau.de/cran/) und schauen Sie, ob eine neue stabile Version verfügbar ist.
+
+## Arbeiten in einem Markdown-Dokument
+
+R Markdown ist kein normales R Skript. Markdowns sind besonders sinnvoll für reproduzierbare Berichte, bei denen mehr Text als Code verwendet wird. Text kann im Markdown einfach geschrieben werden, Code wird in Code Snippets geschrieben und ausgeführt. Aus dem Markdown kann mittels des Buttons `Knit` in der kleinen Werkzeugleiste eine HTML, eine PDF oder ein Word Dokument erstellt werden. Beim "*knitten*" werden alle Sonderzeichen interpretiert und alle Code Snippets ausgeführt. **Versuchen Sie nun, dieses Dokument in eine HTML umzuwandeln!** 
+
+Die Sonderzeichen werden für Textmarkierungen verwendet. Hier eine Auswahl der wichtigsten Zeichen:
+
+\# Überschrift: Mit einem Hashtag bekommt man die größtmögliche Überschrift; je mehr Hashtags man benutzt, desto kleiner wird die Überschrift
+
+Der Backslash ist übrigens das Escape Zeichen, mit dem man verhindert, dass ein Sonderzeichen beim *knitten* des Markdowns interpretiert wird. Stattdessen wird einfach das Zeichen wiedergegeben.
+
+**fett**: Mit doppeltem Asterisk vor und hinter eine Textpassage wird der Text fett gesetzt.
+
+*kursiv*: Mit einfachem Asterisk wird der Text kursiv.
+
+`code`: die einfachen rückwärts gewandten Anführungszeichen heben den darin enthaltenen Text hervor; das wird üblicherweise für Code benutzt, wenn man sich außerhalb eines Code Snippets befindet; dieser Code kann aber nicht ausgeführt werden!
+
+```: Die dreifachen rückwarts gewandten Anführungszeichen markieren den Anfang und das Ende eine Code Snippets (auch Code Block genannt). Dazwischen darf nur Code geschrieben werden; Text muss mit einem Hashtag als Kommentar verfasst werden. Am Anfang des Code Snippets wird außerdem in geschweiften Klammern angegeben, welche Programmiersprache man im Code Block schreibt (in unserem Fall: {r}).
+
+Noch mehr Informationen finden Sie im [Cheatsheet zu R Markdown](https://www.rstudio.org/links/r_markdown_cheat_sheet).
+
+## Hilfe zur Selbsthilfe
+
+Es gibt eine sehr große und hilfsbereite R Community, die Ihnen das Programmieren mit R erleichtern wird. Hier ein paar gute Links und Befehle, falls Sie mal nicht weiter wissen:
+
+- [Stack Overflow](https://stackoverflow.com/questions/tagged/r): Ein Blog, auf dem Sie höchstwahrscheinlich eine Antwort auf Ihre Frage zu R finden werden. Am einfachsten googlen Sie Ihre Frage auf Englisch; die Antwort eines Mitglieds von Stack Overflow wird bei den ersten Suchergebnissen dabei sein.
+
+- [Hadley Wickham's "R for Data Science"](https://r4ds.had.co.nz/): Hadley Wickham ist der Chief Programmer des "tidyverse". Seine Bücher sind sehr verständlich, gut strukturiert und kurzweilig zu lesen.
+
+- [Winston Chang's "Cookbook for R"](http://www.cookbook-r.com/Graphs/): Ein gutes Nachschlagewerk für `ggplot2`.
+
+- Cheatsheets: Das sind PDFs, die eine Funktionsübersicht mit Erklärungen und ggf. Beispielen in absoluter Kurzform bieten. Sie finden einige Cheatsheets unter `Help > Cheatsheets`. Ansonsten kann man Cheatsheets auch googlen und findet dann z.B. [Data Wrangling with dplyr and tidyr](https://rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf), das [Cheatsheet ggplot2](https://rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf) oder diese sehr ausführliche [Reference Card](https://cran.r-project.org/doc/contrib/Short-refcard.pdf).
+
+- Vignetten: Zu einigen essentiellen Paketen gibt es so genannte "Vignetten", das sind meist HTMLs oder PDFs (erzeugt aus einem R Markdown), die die Autoren eines Pakets geschrieben haben. Sie können mit folgender Konsoleneingabe nach Vignetten suchen:
+
+```{r, eval = F}
+vignette()
+# zum Beispiel zu einer Library aus dem tidyverse:
+vignette("dplyr")
+```
+
+- In RStudio können Sie sich über die Eigenschaften einer Funktion informieren, indem Sie im Panel mit dem Tab `Help` die gewünschte Funktion ins Suchfeld eingeben. Sie erhalten dann u.a. Informationen über die Argumente der Funktion und Beispiele. Dasselbe erreichen Sie über diese Konsoleneingaben:
+
+```{r, eval = F}
+# zum Beispiel für die Funktion getwd():
+?getwd
+help("getwd")
+```
+
+# Statistik in R: Literatur
+
+Wenn Sie mehr Informationen zu den Themen dieses Workshops benötigen, seien Ihnen folgende Werke ans Herz gelegt:
+
+- Bodo Winter's "Statistics for Linguists: An Introduction using R": Ein frisch erschienenes Buch voller hervorragender Erklärungen zu allen wichtigen Themen der Inferenzstatistik. Derzeit nur als physisches Exemplar im Philologicum verfügbar.
+
+- Stefan Gries' "Statistics for Linguistics with R: A Practical Introduction": Nützlich für die Entscheidungsfindung, welches statistische Modell zu den eigenen Daten und der eigenen Fragestellung passt. Da das Buch von 2009 ist, ist der Code z.T. veraltet, aber aus statistischer Sicht ist der Inhalt noch aktuell. Als Volltext über die Unibib verfügbar.
+
+- Harald Baayen's "Analyzing Linguistic Data: A Practical Introduction to Statistics": Einführung für eher Fortgeschrittene. Hier ist der R Code ebenfalls oft veraltet, aber die Erklärungen und Beispiele zu den Statistikgrundlagen sind hilfreich. Als physisches Exemplar in der Unibib verfügbar.
+
+# Empirische und theoretische Verteilungen
+
+## Daten kennenlernen
+
+### Deskriptive Werte
+
+Um später den richtigen statistischen Test auswählen zu können, müssen Sie Ihre Daten kennen. Hierbei helfen vor allen Dingen Abbildungen und deskriptive Werte, wie (Gruppen-)Mittelwert, Median, Standardabweichung. Zunächst laden wir einen Data Frame, der die Dauer von Vokalen enthält:
+
+```{r}
+url <- "http://www.phonetik.uni-muenchen.de/~jmh/lehre/Rdf"
+dauer <- read.table(file.path(url, "vdata.txt"))
+head(dauer)
+dim(dauer)
+```
+
+Nun berechnen wir ein paar deskriptive statistische Werte:
+
+- **Minimum** und **Maximum**
+- **Arithmetisches Mittel**: auch Mittelwert oder Durchschnitt genannt. Wird berechnet als die Summe aller Werte geteilt durch die Anzahl der Werte.
+- **Median**: der mittlere Wert einer geordneten Zahlenreihe. Bei einer geraden Anzahl an Zahlen wird der Median aus dem Mittelwert der beiden mittleren Werten berechnet.
+- **Standardabweichung**: ein Maß für die Streuung der Werte um den Mittelwert
+
+```{r}
+range(dauer$dur)
+mean(dauer$dur)
+median(dauer$dur)
+sd(dauer$dur)
+```
+
+Natürlich können wir jeden dieser Werte auch pro Vokaltyp berechnen. Dazu benutzen wir `tidyverse`-Funktionen:
+
+```{r}
+dauer %>%
+  group_by(V) %>%
+  dplyr::summarise(mean = mean(dur),
+                   median = median(dur),
+                   sd = sd(dur),
+                   min = min(dur),
+                   max = max(dur))
+```
+
+### Boxplot
+
+Als Abbildungen eignen sich grundsätzlich Scatterplots (bei zwei numerischen Variablen), Boxplots, Histogramme und die Wahrscheinlichkeitsdichteverteilung. All diese Plots lassen sich ganz einfach mit `ggplot2` erzeugen. Für die Dauerwerte fangen wir mit einem [Boxplot](https://de.wikipedia.org/wiki/Box-Plot) an. Ein Boxplot besteht aus folgenden Teilen:
+
+![](img/boxplot.svg){width=110%}
+
+- **Median**: Der Strich innerhalb der Box ist der Median.
+- **Box**: Die Box umfasst die mittleren 50% aller Datenpunkte. Das untere Ende der Box ist das erste Quartil Q1 (25% Perzentil), das obere Ende ist das dritte Quartil Q3 (75% Perzentil). Die Differenz zwischen Q1 und Q3 wird auch als **interquartiler Bereich** (*interquantile range*, IQR) bezeichnet.
+- **Whiskers**: Die Whiskers erstrecken sich vom Q1 und vom Q3 aus zu dem niedrigsten/höchsten Datenpunkt, der innerhalb von `1.5 * IQR` liegt.
+- **Punkte**: Ausreißer, also alle restlichen Datenpunkte, die nicht in der Box und den Whiskers enthalten sind.
+
+Hier ist ein Boxplot der Dauer des Vokals /Y/ aus dem Data Frame `dauer`:
+
+```{r}
+dauer_y <- dauer %>% dplyr::filter(V == "Y")
+ggplot(dauer_y) + 
+  aes(x = V, y = dur) + 
+  geom_boxplot() + 
+  xlab("")
+```
+
+Nun versuchen wir die Werte im Boxplot nachzuvollziehen:
+
+```{r}
+Median <- median(dauer_y$dur)
+Median
+Q1 <- as.numeric(quantile(dauer_y$dur, 0.25))
+Q1
+Q3 <- as.numeric(quantile(dauer_y$dur, 0.75))
+Q3
+iqr <- IQR(dauer_y$dur)
+iqr
+# IQR = Länge der Box
+iqr == as.numeric(Q3-Q1)
+whisker_Q1 <- Q1 - 1.5 * iqr
+whisker_Q1
+whisker_Q3 <- Q3 + 1.5 * iqr
+whisker_Q3
+# Ende des unteren Whiskers
+whisker_Q1_end <- dauer_y %>% dplyr::filter(dur > whisker_Q1 & dur < Q1) %>% dplyr::summarise(d = min(dur)) %>% pull(d)
+whisker_Q1_end
+# in diesem Fall stimmt folgendes:
+whisker_Q1_end == min(dauer_y$dur)
+# Ende des oberen Whiskers
+whisker_Q3_end <- dauer_y %>% dplyr::filter(dur < whisker_Q3 & dur > Q3) %>% dplyr::summarise(d = max(dur)) %>% pull(d)
+whisker_Q3_end
+# hier sind der höchste Datenpunkt und der Ende des Whiskers nicht derselbe Punkt
+whisker_Q3_end == max(dauer_y$dur)
+outliers <- dauer_y %>% dplyr::filter(dur > whisker_Q3) %>% pull(dur)
+outliers
+```
+
+### Histogramm
+
+Eine andere Art der Abbildung ist das **Histogramm**. Das Histogramm gruppiert die Werte in sogenannten *bins* (Balken), die einen gewissen Wertebereich abdecken. Dann zeigt das Histogramm wie viele Datenpunkte (der *count*) in einem bestimmten Wertebereich liegen. Histogramme können dabei helfen zu erkennen, um welche Art von theoretischer Verteilung (Normalverteilung, Poisson-Verteilung, etc.) es sich bei den Daten handeln könnte.
+
+```{r}
+ggplot(dauer) + 
+  aes(x = dur) + 
+  geom_histogram(bins = 50, color = "white")
+```
+
+**Sonderfall Dauer**: Wie wir im Histogramm oben sehen können, steigt die Verteilung steil an und fällt dann langsamer ab (d.h. sie hat einen positiven Skew). Das ist ganz typisch für Dauer-Messungen und einige andere Arten von Werten, denn es gibt ein natürliches unteres Limit (eine Dauer kann nicht negativ sein) und kein Limit nach oben. Wenn dies bei Ihrer Verteilung der Fall ist, sollten Sie die Daten **logarithmieren** (und zwar nicht nur in der Abbildung, sondern auch bei der Statistik später!):
+
+```{r}
+dauer %<>% mutate(logDur = log(dur))
+ggplot(dauer) + 
+  aes(x = logDur) + 
+  geom_histogram(bins = 50, color = "white")
+```
+
+### Wahrscheinlichkeitsdichte
+
+Um aus einem Histogramm eine **Wahrscheinlichkeitsdichteverteilung** (*probability density*) zu machen, muss die y-Achse so verändert werden, dass die Fläche unter allen *bins* genau 1 ist. In `ggplot2` fügt man hierfür `y = ..density..` zu den *aesthetic mappings* hinzu.
+
+```{r}
+ggplot(dauer) + 
+  aes(x = logDur, y = ..density..) + 
+  geom_histogram(bins = 50, color = "white")
+```
+
+Die Wahrscheinlichkeitsdichte wird berechnet als `count / (N * Balkenbreite)`, wobei $N$ für die Anzahl der Beobachtungen im Datensatz steht. Am Beispiel vom höchsten Balken im obigen Histogramm können wir diese Rechnung beispielhaft durchführen: der *count* beträgt hier 175 und die Balkenbreite (*binwidth*) ist ca. 0.042. Dann ist die entsprechende Wahrscheinlichkeitsdichte für diesen Balken, den sie im obigen Density Plot ablesen können:
+
+```{r}
+density <- 175 / (nrow(dauer) * 0.042)
+density
+```
+
+Die Fläche dieses Balkens ist `Balkenbreite * Balkenhöhe`, also:
+
+```{r}
+area <- 0.042 * density
+area
+```
+
+Das heißt, dass ca. 5.9% aller Daten im Wertebereich dieses einen *bins* liegen. Wenn Sie die Fläche für jeden der *bins* berechnen und alles aufsummieren, kommen Sie genau auf 1. Wenn man nun für einen Datensatz unendliche viele unendlich schmale *bins* plotten würde, bekäme man die **Wahrscheinlichkeitsdichtefunktion** (*probability density function*). Für diese Funktion gilt ebenfalls, dass die Fläche darunter genau 1 ist. In `ggplot2` wird diese Funktion mit `geom_density()` gezeichnet:
+
+```{r}
+ggplot(dauer) + 
+  aes(x = logDur) + 
+  geom_density()
+```
+
+Wenn wir das Experiment nochmal durchführen würden, mit dem wir die Daten in `dauer` erhalten haben, dann könnten wir mittels der Wahrscheinlichkeitsdichtefunktion vorhersagen, mit welcher Wahrscheinlichkeit ein neuer Wert aus dem Experiment in einen bestimmten Wertebereich fällt. Hierzu gleich mehr.
+
+## Normalverteilung
+
+### Sind meine Daten normalverteilt?
+
+In vielen empirischen Experimenten folgen die Daten einer Normalverteilung (auch Gauss-Verteilung genannt). Diese Verteilung lässt sich durch die zwei Parameter Mittelwert und Standardabweichung vollständig beschreiben. In `ggplot2` nutzen wir die Funktion `dnorm()`, die die entsprechenden zwei Argumente bekommt. Hier überlagern wir die obige Wahrscheinlichkeitsdichteverteilung von `dauer` mit der Normalverteilung (in blau), die durch den Mittelwert und die Standardabweichung der logarithmierten Dauerwerte beschrieben wird:
+
+```{r}
+ggplot(dauer) + 
+  aes(x = logDur) + 
+  geom_density() + 
+  xlim(3.0, 7.0) + 
+  stat_function(fun = dnorm, 
+                args = list(mean = mean(dauer$logDur), sd = sd(dauer$logDur)), 
+                inherit.aes = F, 
+                color = "blue")
+```
+
+Hier sehen wir, dass die Normalverteilung genau symmetrisch um den Mittelwert `mean(dauer$logDur)` liegt, aber die empirische Verteilung leicht davon abweicht. Um zu testen, ob Daten normalverteilt sind, sind visuelle Methoden unter angewandten Statistikern und Statistikerinnen beliebter als statistische Tests. Neben der Überlagerung der Normalverteilung auf die empirische Verteilung werden häufig sogenannte **Q-Q-Plots** benutzt, wobei Q für **Quantil** (*quantile*) steht. Ein Quantil teilt eine Verteilung so auf, dass p% aller Datenpunkte unterhalb des Quantils liegen. Übrigens ist Quantil ein Überbegriff; je nachdem in wie viele Stücke man die 100% der Datenpunkte aufteilt, sagt man auch Perzentil (100 Stücke) oder **Quartil** (4 Stücke). Daher haben wir z.B. oben beim Boxplot vom ersten *Quartil* gesprochen, denn es handelt sich dabei um das *25%-Quantil*. Schauen Sie folgendes [YouTube-Video](https://www.youtube.com/watch?v=X9_ISJ0YpGw), um zu verstehen, wie ein Q-Q-Plot berechnet wird. Und lassen Sie sich nicht verwirren: Obwohl auf der y-Achse "*sample quantiles*" steht, sind das einfach nur die aufsteigend geordneten Datenpunkte!
+
+```{r}
+ggplot(dauer) + 
+  aes(sample = logDur) + 
+  stat_qq() + 
+  stat_qq_line() + 
+  ylab("samples") + 
+  xlab("theoretical quantiles")
+```
+
+In `ggplot2` kann diese Abbildung mittels `stat_qq()` erstellt werden. Zusätzlich plotten wir mit `stat_qq_line()` eine gerade Linie, die wir zur Orientierung nutzen können. Wenn die Punkte von der Linie abweichen, sind die Daten nicht normalverteilt (wobei leichte Abweichungen am oberen und unteren Ende der Linie recht häufig sind). In diesem Fall ist ebenfalls eine leichte Abweichung von der Normalverteilung zu erkennen.
+
+Zuletzt schauen wir uns noch den **Shapiro-Wilk Test** an, weil das der am häufigsten verwendete Test für Normalverteilungen ist. In R ist dazu die Funktion `shapiro.test()` gedacht, die als einziges Argument ihre Daten als Vektor bekommt:
+
+```{r}
+shapiro.test(dauer$logDur)
+```
+
+Die Null-Hypothese dieses Tests ist, dass die Daten tatsächlich normalverteilt sind. Wenn der **p-Wert** unter dem allgemein anerkannten Signifikanzniveau von $\alpha = 0.05$ liegt, müssen wir diese Hypothese ablehnen und daher davon ausgehen, dass die Daten nicht normalverteilt sind. Unsere logarithmierten Dauerwerte sind laut diesem Test also nicht normalverteilt. Für den Shapiro-Wilk Test sollte ihr Datensatz aus weniger als 5000 Beobachtungen bestehen und nicht zu viele Ausreißer oder identische Werte besitzen, da dies die Aussagekraft des Ergebnisses stark beeinflussen kann.
+
+### Konfidenzintervall & 68–95–99.7 rule
+
+Für Normalverteilungen (und in Annäherung auch für quasi-normalverteilte Daten) gilt die sogenannte 68–95–99.7 Regel. Wir illustrieren dies an einer Normalverteilung mit Mittelwert Null und Standardabweichung Eins:
+
+```{r}
+ggplot() +
+  xlim(-4, 4) + 
+  xlab("standard deviation") +
+  ylab("probability density") + 
+  geom_vline(xintercept = 0, lty = "dashed") + 
+  stat_function(fun = dnorm, 
+                args = list(mean = 0, sd = 1), 
+                inherit.aes = F) + 
+  stat_function(fun = dnorm, 
+                args = list(mean = 0, sd = 1), 
+                geom = "area", xlim = c(-1, 1), fill = "cornflowerblue", alpha = 0.5) +
+  stat_function(fun = dnorm, 
+                args = list(mean = 0, sd = 1), 
+                geom = "area", xlim = c(-2, -1), fill = "violetred4", alpha = 0.5) + 
+  stat_function(fun = dnorm, 
+                args = list(mean = 0, sd = 1), 
+                geom = "area", xlim = c(1, 2), fill = "violetred4", alpha = 0.5) + 
+  stat_function(fun = dnorm, 
+                args = list(mean = 0, sd = 1), 
+                geom = "area", xlim = c(-3, -2), fill = "goldenrod", alpha = 0.5) + 
+  stat_function(fun = dnorm, 
+                args = list(mean = 0, sd = 1), 
+                geom = "area", xlim = c(2, 3), fill = "goldenrod", alpha = 0.5) + 
+  annotate(geom = "text", x = 0.5, y = 0.2, label = "0.34") + 
+  annotate(geom = "text", x = -0.5, y = 0.2, label = "0.34") + 
+  annotate(geom = "text", x = 1.5, y = 0.05, label = "0.135") + 
+  annotate(geom = "text", x = -1.5, y = 0.05, label = "0.135") + 
+  annotate(geom = "text", x = 2.3, y = 0.01, label = "0.02") + 
+  annotate(geom = "text", x = -2.3, y = 0.01, label = "0.02")
+```
+
+Die Fläche unter der Normalverteilung ist 1, d.h. wir können mithilfe der Fläche bestimmen, mit welcher Wahrscheinlichkeit Datenpunkte in einen Wertebereich fallen. Bei der Normalverteilung fallen 68% der Daten in den blauen Bereich, 95% der Daten in den blauen + roten Bereich und 99.7% aller Daten in den gesamten eingefärbten Bereich. Dies entspricht dem Mittelwert $\mu$ $\pm1\sigma$, $\pm2\sigma$ und $\pm3\sigma$.
+
+Die Fläche unter der Normalverteilung können wir mit `pnorm()` berechnen. Diese Funktion bekommt einen x-Wert und den Mittelwert und die Standardabweichung, die die Normalverteilung beschreiben (der *default* ist Null und Eins, deshalb lasse ich hier diese beiden Argumente weg). Dann berechnet `pnorm()` die Fläche von minus unendlich bis zu dem genannten x-Wert. Wenn wir einen ganz hohen x-Wert eintragen, sollte klar werden, dass die Fläche unter der Normalverteilung tatsächlich 1 ist:
+
+```{r}
+pnorm(100)
+```
+
+Für `x = 0` (also unseren Mittelwert) sollte die Fläche 0.5 betragen:
+
+```{r}
+pnorm(0)
+```
+
+Das heißt 50% aller Datenpunkte fallen in den Bereich von minus unendlich bis null. Nun können wir auch die oben eingefärbten Flächen berechnen:
+
+```{r}
+# blaue Flächen:
+pnorm(0) - pnorm(-1)
+pnorm(1) - pnorm(0)
+# rote Flächen:
+pnorm(-1) - pnorm(-2)
+pnorm(2) - pnorm(1)
+# gelbe Flächen:
+pnorm(-2) - pnorm(-3)
+pnorm(3) - pnorm(2)
+```
+
+In der Statistik interessieren wir uns häufig dafür, ob Daten in das **Konfidenzintervall** fallen, meist wird vom 95%-Konfidenzintervall gesprochen. Das heißt bei normalverteilten Daten prüfen wir, ob ein Datenpunkt in den Wertebereich $\mu \pm 2\sigma$ fällt. Um wiederum herauszufinden, welcher Wertebereich das genau ist, nutzen wir `qnorm()`, wieder Mittelwert und Standardabweichung als Argumente bekommt und zusätzlich die Fläche unter der Verteilung. Wenn wir symmetrisch um den Mittelwert eine Fläche von insgesamt 0.95 haben wollen, ist die Fläche am linken und rechten Rand der Verteilung jeweils $(1 - 0.95) / 2 = 0.025$. Für unsere Normalverteilung oben können wir dann berechnen:
+
+```{r}
+qnorm(0.025)
+qnorm(1-0.025)
+```
+
+Das heißt für die Normalverteilung mit Mittelwert Null und Standardabweichung 1 liegt eine Fläche von 0.95 zwischen -1.96 und 1.96. Oben hatten wir gesagt, dass die Fläche von 0.95 aber $\mu \pm2\sigma$ entspricht -- genauer hätten wir schreiben müssen $\mu \pm 1.96\sigma$.
+
+### Empirische Verteilung
+
+```{r}
+df <- read.table(file.path(url, "ice.txt")) %>% 
+  mutate(logDur = log(Dauer)) %>% 
+  dplyr::filter(logDur < 5.2)
+head(df)
+```
+
+- Berechnen Sie für die empirisch erhobenen Dauerwerte in `df$logDur` folgende Werte unter der Annahme, dass die Daten normalverteilt sind: Mittelwert, Standardabweichung, Minimum, Maximum, Median.
+
+```{r}
+# Platz zum Ausprobieren:
+
+```
+
+- Erstellen Sie für die logarithmierte Dauer einen Boxplot pro Konsonant (`df$Stop`) sowie eine Wahrscheinlichkeitsverteilung:
+
+```{r}
+# Platz zum Ausprobieren:
+
+```
+
+- Schätzen Sie mittels visueller Methoden ab, ob die Daten einer Normalverteilung folgen.
+
+```{r}
+# Platz zum Ausprobieren:
+
+```
+
+- Berechnen Sie das 95%-Konfidenzintervall für die logarithmierte Dauer in `df`:
+
+```{r}
+# Platz zum Ausprobieren:
+
+```
+
+- Mit welcher Wahrscheinlichkeit fallen Werte aus diesem Experiment in einen Wertebereich
+  - unter 4.0?
+  - über 5.0?
+  - zwischen 4.0 und 4.5?
+
+```{r}
+# Platz zum Ausprobieren:
+
+```
+
+
+## Population und Stichprobe
+
+Eine Population oder Grundgesamtheit ist im statistischen Sinne die Menge aller Einheiten (d.h. Personen, Wörter, etc.), die in bestimmten Identifikationskriterien (z.B. Geschlecht, Herkunft, grammatikalische Funktion, etc.) übereinstimmen. Stellen Sie sich z.B. vor, Sie möchten die durchschnittliche Grundfrequenz (F0) aller Frauen in Deutschland erfassen. Dann ist Ihre Population die Menge aller Frauen in Deutschland, also ca. 40 Mio. Menschen. Den Populationsmittelwert $\mu$ (sprich: /myː/, geschrieben oft: mu) können Sie in diesem Beispiel nur ermitteln, indem Sie zu jeder einzelnen Frau in Deutschland fahren und deren Grundfrequenz messen, was natürlich schon rein wirtschaftlich unmöglich ist. 
+
+Stattdessen erhebt man in der Wissenschaft meist Stichproben (*samples*), also z.B. nur einen Teil der weiblichen Bevölkerung, und geht davon aus, dass der so erhaltene Stichprobenmittelwert $m$ nicht allzu weit weg ist vom tatsächlichen Populationsmittelwert $\mu$. Je größer die Stichprobe ist, desto mehr wird sich deren Mittelwert $m$ und Standardabweichung $s$ dem tatsächlichen Populationsmittelwert $\mu$ und der Populationsstandardabweichung $\sigma$ annähern. Für die Merkmale einer Population werden im Normalfall griechische Symbole verwendet, für die Merkmale einer empirisch erhobenen Verteilung (d.h. einer Stichprobe) werden römische Buchstaben benutzt.
+
+Die Methoden der **Inferenzstatistik** ermöglichen uns Rückschlüsse von der Stichprobe auf die Population. Genauer gesagt: die Inferenzstatistik hilft uns dabei, die Parameter der Population zu **schätzen**. Es gibt auch Maße wie z.B. den Standard-Error, die beschreiben wie gut oder schlecht die Schätzung ist.
+
+- samples estimates vs. population parameters (S. 57)
+- Student t Verteilung: Freiheitsgrade
+- Poisson?
+- Bernoulli?
+- Chi^2?
+
+# Einfache lineare Regression
+
+Bisher haben wir uns mithilfe der deskriptiven Statistik eine Variable (nämlich die Dauer von Sprachlauten) genauer angeschaut und einiges über die deren Verteilung erfahren. Häufig stehen solche Variablen jedoch in Abhängigkeit zu anderen Variablen. Zum Beispiel ist durch viele Studien belegt worden, dass unsere Reaktionsfähigkeit mit steigendem Schlafmangel abnimmt. Das heißt, dass die durchschnittliche Reaktionszeit von der Variable Schlafmangel abhängig ist. Wir sprechen deshalb auch von abhängigen und unabhängigen Variablen. Mit der einfachen linearen Regression lassen sich diese Abhängigkeiten beschreiben. Oft wird auch davon gesprochen, dass man den Wert der abhängigen Variable $y$ durch die unabhängige Variable $x$ vorhersagt. Bevor wir eine lineare Regression durchführen, sprechen wir über Regressionslinien und Korrelation.
+
+## Die Regressionslinie
+
+In der linearen Regression ist die Regressionslinie, naja, eben linear. Das bedeutet, sie lässt sich mit folgender Formel beschreiben:
+
+$y = k + bx$
+
+Hierbei ist $k$ der y-Achsenabschnitt (**intercept**) und $b$ die Steigung (**slope**). Weil Intercept und Slope eine Regressionslinie eindeutig beschreiben, nennt man die beiden Parameter auch Regressionskoeffizienten. Durch die oben gegebene Formel lassen sich bei bekanntem Intercept $k$ und Slope $b$ also für alle möglichen $x$-Werte auch die entsprechenden $y$-Werte vorhersagen.
+
+In der folgenden Abbildung sehen Sie drei Regressionslinien: blau und grün haben dasselbe Intercept, aber entgegengesetzte Slopes; blau und orange haben unterschiedliche Intercepts, aber die gleiche Slope. Der genaue Wert der Steigung gibt an, um wie viel der $y$-Wert steigt oder sinkt, wenn man um eine $x$-Einheit erhöht. Für $x = 0$ in der Abbildung oben ist $y = 1$ (für blau und grün). Für $x = 1$ ist $y = 1 + b$, also für blau $y = 1 + 0.5 = 1.5$ und für grün $y = 1 + (-0.5) = 0.5$. Für die orange Linie gilt bei $x = 0$ ist $y = 2$, bei $x = 1$ ist $y = 2 + 0.5 = 2.5$.
+
+```{r}
+ggplot() + 
+  xlim(-2, 2) + ylim(-2, 4) + xlab("x") + ylab("y") +
+  geom_abline(slope = 0.5, intercept = 1, color = "blue") + 
+  geom_abline(slope = -0.5, intercept = 1, color = "darkgreen") + 
+  geom_abline(slope = 0.5, intercept = 2, color = "orange") + 
+  geom_vline(xintercept = 0, lty = "dashed")
+```
+
+Zusammengefasst beschreiben die blaue und orange Linie also eine positive Korrelation zwischen $x$ und $y$ (je größer $x$, desto größer $y$), die grüne Linie beschreibt eine negative Korrelation (je größer $x$, desto kleiner $y$).
+
+**Achtung: Correlation is not causation!** Die lineare Regression kann nur die Korrelation zwischen zwei Variablen beschreiben, nicht aber die Kausalität. Die Kausalität bringen wir mit unserem Wissen ins Spiel. Wir wissen also zum Beispiel, dass es der Schlafmangel ist, der eine langsamere Reaktionszeit verursacht. Die lineare Regression könnte nur zeigen, ob eine Beziehung zwischen Reaktionszeit und Schlafmangel besteht, aber genauso gut könnte das aus Sicht der Regression bedeuten, dass eine langsamere Reaktionszeit Schlafmangel verursacht.
+
+## Korrelation
+
+Apropos Korrelation. Die Korrelation berechnen wir als *Pearson's correlation* $r$ mit der Funktion `cor()`. In diesem Kapitel werden wir mit den Data Frame `queen` arbeiten:
+
+```{r}
+queen <- read.table(file.path(url, "queen.txt"))
+head(queen)
+```
+
+Darin sind die durchschnittlichen Grundfrequenzwerte von Queen Elizabeth II. bei ihren jährlichen Weihnachtsansprachen festgehalten. Uns interessiert, ob das Alter der Queen einen Einfluss auf ihre Grundfrequenz hat. Erstmal machen wir uns ein Bild von der Lage:
+
+```{r}
+ggplot(queen) + 
+  aes(x = Alter, y = f0) + 
+  geom_point()
+```
+
+Es sieht so aus, als ob es da einen Zusammenhang geben könnte: Je älter die Queen wird, desto mehr sinkt ihre Grundfrequenz! Unseren visuellen Eindruck können wir anhand der Korrelation $r$ überprüfen:
+
+```{r}
+cor(queen$Alter, queen$f0)
+```
+
+Die Korrelation $r$ nimmt ausschließlich Werte zwischen -1 und 1 an. Mit -0.84 liegt eine starke negative Korrelation vor, d.h. unser visueller Eindruck scheint zu stimmen.
+
+## Lineare Regression mit `lm()`
+
+Nun sind wir bereit, eine lineare Regression durchzuführen. Die lineare Regression schätzt Intercept und Slope so ein, dass eine Regressionslinie durch die Datenpunkte gelegt werden kann, die den kleinstmöglichen Abstand zu allen Punkten hat. So sieht sie Regressionslinie in Fall der Queen aus:
+
+```{r}
+ggplot(queen) + 
+  aes(x = Alter, y = f0) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = F, color = "blue")
+```
+
+In `ggplot2` wird hierfür meist die Funktion `geom_smooth(method = "lm")` verwendet. Das benutzt intern die Funktion `lm()`, um die Regressionskoeffizienten zu schätzen. Diese Funktion bekommt wiederum als Argumente nur eine Formel und den Data Frame. Die Formel lautet `y ~ x`, d.h. wir wollen die $y$-Werte (die Grundfrequenz) in Abhängigkeit von den $x$-Werten (dem Alter) vorhersagen.
+
+```{r}
+queen.lm <- lm(f0 ~ Alter, data = queen)
+queen.lm
+```
+
+Die Koeffizienten lassen sich separat auch mit `coef()` ausgeben:
+
+```{r}
+coef(queen.lm)
+```
+
+Wir sehen also, dass das geschätzte Intercept bei 288.2 liegt und die Steigung bei -1.07. Die Steigung wird leider verwirrenderweise immer wie die $x$-Variable genannt, in diesem Fall also "Alter". Die Koeffizienten bedeuten folgendes: Bei einem Alter von Null Jahren ($x = 0$) liegt die Grundfrequenz wahrscheinlich bei ca. 288 Hz. Mit jeden weiteren Jahr ($x$ wird um 1 erhöht) sinkt die Grundfrequenz um 1.07 Hz. Indem wir Intercept und Slope in unsere Formel von vorhin einsetzen, können wir nun für alle möglichen Alter die entsprechende Grundfrequenz vorhersagen:
+
+```{r}
+x <- c(0, 40, 50)
+f0_fitted <- coef(queen.lm)[1] + coef(queen.lm)[2] * x
+f0_fitted
+```
+
+Bei einem Alter von Null Jahren lag die geschätzte Grundfrequenz der Queen wie schon gesagt bei 288 Hz. Bei einem Alter von 40 Jahren waren es vermutlich schon nur noch 245 Hz, bei 50 Jahren 234.5 Hz. Wie Sie sehen, lassen sich anhand des von uns "gefitteten Modells" auch $y$-Werte vorhersagen bzw. schätzen, die nicht im originalen Datensatz enthalten waren. Alle diese Punkte liegen aber genau auf der Regressionslinie und da die Regressionslinie unendlich lang ist, ergibt die Schätzung nicht zwangsläufig für alle Werte Sinn. Halten Sie es beispielsweise für wahrscheinlich, dass die Grundfrequenz der Queen bei ihrer Geburt bei 288 Hz lag? Normalerweise haben Kinder eine Grundfrequenz von 300 bis 400 Hz. Sie müssen für Ihre Daten immer wissen, ob die Schätzungen sinnvoll sind oder nicht. In R können Sie die Schätzungen mit der Funktion `predict()` durchführen, die als Argumente das Modell `queen.lm` und einen Data Frame mit den $x$-Werten bekommt, für die $y$ geschätzt werden soll. Dabei muss die $x$-Variable genauso heißen wie in dem ursprünglichen Data Frame, also hier "Alter":
+
+```{r}
+predict(queen.lm, data.frame(Alter = seq(0, 100, by = 10)))
+```
+
+## Residuals
+
+
+
+Die lineare Regression schätzt Intercept und Slope für eine Regressionslinie, die mittels des **least squares** Verfahren durch unsere Daten gelegt wurde.
+
+
+
+
+```{r, eval = F}
+head(midwest)
+ggplot(midwest) + aes(x = area, y = poptotal) + geom_point()
+ggplot(midwest) + aes(x = state, y = area) + geom_boxplot()
+ggplot(msleep) + aes(x = vore, y = awake) + geom_boxplot()
+```
+
+
+- Intercepts and slopes
+- neue Werte vorhersagen (sinnvoll=interpolation und unsinnvoll=extrapolation)
+- residuals
+- Annahmen: Normalität, konstante Varianz
+- R^2
+- Intercept-only model (wo intercept == mean und slop == 0)
+
+# Mixed Models (LMERs)
+
+
+
+
+
