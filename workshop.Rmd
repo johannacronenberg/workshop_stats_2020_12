@@ -373,20 +373,20 @@ Das heißt für die Normalverteilung mit Mittelwert Null und Standardabweichung 
 ### Empirische Verteilung
 
 ```{r}
-df <- read.table(file.path(url, "ice.txt")) %>% 
+ice <- read.table(file.path(url, "ice.txt")) %>% 
   mutate(logDur = log(Dauer)) %>% 
   dplyr::filter(logDur < 5.2)
-head(df)
+head(ice)
 ```
 
-- Berechnen Sie für die empirisch erhobenen Dauerwerte in `df$logDur` folgende Werte unter der Annahme, dass die Daten normalverteilt sind: Mittelwert, Standardabweichung, Minimum, Maximum, Median.
+- Berechnen Sie für die empirisch erhobenen Dauerwerte in `ice$logDur` folgende Werte unter der Annahme, dass die Daten normalverteilt sind: Mittelwert, Standardabweichung, Minimum, Maximum, Median.
 
 ```{r}
 # Platz zum Ausprobieren:
 
 ```
 
-- Erstellen Sie für die logarithmierte Dauer einen Boxplot pro Konsonant (`df$Stop`) sowie eine Wahrscheinlichkeitsverteilung:
+- Erstellen Sie für die logarithmierte Dauer einen Boxplot pro Konsonant (`ice$Stop`) sowie eine Wahrscheinlichkeitsverteilung:
 
 ```{r}
 # Platz zum Ausprobieren:
@@ -400,7 +400,7 @@ head(df)
 
 ```
 
-- Berechnen Sie das 95%-Konfidenzintervall für die logarithmierte Dauer in `df`:
+- Berechnen Sie das 95%-Konfidenzintervall für die logarithmierte Dauer in `ice`:
 
 ```{r}
 # Platz zum Ausprobieren:
@@ -424,13 +424,7 @@ Eine Population oder Grundgesamtheit ist im statistischen Sinne die Menge aller 
 
 Stattdessen erhebt man in der Wissenschaft meist Stichproben (*samples*), also z.B. nur einen Teil der weiblichen Bevölkerung, und geht davon aus, dass der so erhaltene Stichprobenmittelwert $m$ nicht allzu weit weg ist vom tatsächlichen Populationsmittelwert $\mu$. Je größer die Stichprobe ist, desto mehr wird sich deren Mittelwert $m$ und Standardabweichung $s$ dem tatsächlichen Populationsmittelwert $\mu$ und der Populationsstandardabweichung $\sigma$ annähern. Für die Merkmale einer Population werden im Normalfall griechische Symbole verwendet, für die Merkmale einer empirisch erhobenen Verteilung (d.h. einer Stichprobe) werden römische Buchstaben benutzt.
 
-Die Methoden der **Inferenzstatistik** ermöglichen uns Rückschlüsse von der Stichprobe auf die Population. Genauer gesagt: die Inferenzstatistik hilft uns dabei, die Parameter der Population zu **schätzen**. Es gibt auch Maße wie z.B. den Standard-Error, die beschreiben wie gut oder schlecht die Schätzung ist.
-
-- samples estimates vs. population parameters (S. 57)
-- Student t Verteilung: Freiheitsgrade
-- Poisson?
-- Bernoulli?
-- Chi^2?
+Die Methoden der **Inferenzstatistik** ermöglichen uns Rückschlüsse von der Stichprobe auf die Population. Genauer gesagt: die Inferenzstatistik hilft uns dabei, die Parameter der Population zu **schätzen**. Es gibt auch Maße wie z.B. den Standard Error, die beschreiben wie gut oder schlecht die Schätzung ist.
 
 # Einfache lineare Regression
 
@@ -516,7 +510,7 @@ f0_fitted <- coef(queen.lm)[1] + coef(queen.lm)[2] * x
 f0_fitted
 ```
 
-Bei einem Alter von Null Jahren lag die geschätzte Grundfrequenz der Queen wie schon gesagt bei 288 Hz. Bei einem Alter von 40 Jahren waren es vermutlich schon nur noch 245 Hz, bei 50 Jahren 234.5 Hz. Wie Sie sehen, lassen sich anhand des von uns "gefitteten Modells" auch $y$-Werte vorhersagen bzw. schätzen, die nicht im originalen Datensatz enthalten waren. Alle diese Punkte liegen aber genau auf der Regressionslinie und da die Regressionslinie unendlich lang ist, ergibt die Schätzung nicht zwangsläufig für alle Werte Sinn. Halten Sie es beispielsweise für wahrscheinlich, dass die Grundfrequenz der Queen bei ihrer Geburt bei 288 Hz lag? Normalerweise haben Kinder eine Grundfrequenz von 300 bis 400 Hz. Sie müssen für Ihre Daten immer wissen, ob die Schätzungen sinnvoll sind oder nicht. In R können Sie die Schätzungen mit der Funktion `predict()` durchführen, die als Argumente das Modell `queen.lm` und einen Data Frame mit den $x$-Werten bekommt, für die $y$ geschätzt werden soll. Dabei muss die $x$-Variable genauso heißen wie in dem ursprünglichen Data Frame, also hier "Alter":
+Bei einem Alter von Null Jahren lag die geschätzte Grundfrequenz der Queen wie schon gesagt bei 288 Hz. Bei einem Alter von 40 Jahren waren es vermutlich schon nur noch 245 Hz, bei 50 Jahren 234.5 Hz. Wie Sie sehen, lassen sich anhand des von uns "gefitteten Modells" auch $y$-Werte vorhersagen bzw. schätzen, die nicht im originalen Datensatz enthalten waren (wie z.B. den f0-Wert für die 50-jährige Queen). Alle diese Punkte liegen aber genau auf der Regressionslinie und da die Regressionslinie unendlich lang ist, ergibt die Schätzung nicht zwangsläufig für alle Werte Sinn. Halten Sie es beispielsweise für wahrscheinlich, dass die Grundfrequenz der Queen bei ihrer Geburt bei 288 Hz lag? Normalerweise haben Kinder eine Grundfrequenz von 300 bis 400 Hz. Sie müssen für Ihre Daten immer wissen, ob die Schätzungen sinnvoll sind oder nicht. In R können Sie die Schätzungen mit der Funktion `predict()` durchführen, die als Argumente das Modell `queen.lm` und einen Data Frame mit den $x$-Werten bekommt, für die $y$ geschätzt werden soll. Dabei muss die $x$-Variable genauso heißen wie in dem ursprünglichen Data Frame, also hier "Alter":
 
 ```{r}
 predict(queen.lm, data.frame(Alter = seq(0, 100, by = 10)))
@@ -524,29 +518,345 @@ predict(queen.lm, data.frame(Alter = seq(0, 100, by = 10)))
 
 ## Residuals
 
+Wir sehen oben den geschätzten $y$-Wert für $x = 40$, also den Grundfrequenzwert für die Queen mit 40 Jahren, nämlich ca. 245 Hz. Der tatsächlich gemessene Wert liegt aber weit darunter:
 
+```{r}
+queen %>% filter(Alter == 40) %>% pull(f0)
+```
 
-Die lineare Regression schätzt Intercept und Slope für eine Regressionslinie, die mittels des **least squares** Verfahren durch unsere Daten gelegt wurde.
+Die Differenzen zwischen den geschätzten und gemessenen $y$-Werten werden **Residuals** genannt. Die folgende Abbildung zeigt einen Ausschnitt aus dem vorherigen Plot für die Altersspanne zwischen 30 und 40 Jahren. Die schwarzen Punkte sind die tatsächlich gemessenen f0-Werte, die roten Punkte hingegen sind die geschätzten Werte. Sie liegen genau auf der blauen Regressionslinie (die wir diesmal, weil wir ja Intercept und Steigung kennen, mit `geom_abline()` gezeichnet haben). Die vertikalen gestrichelten Linien stellen die Residuals dar. Diese Abbildung verdeutlicht, weshalb Residuals auch als **Error** bezeichnet werden.
 
+```{r}
+alter <- queen %>% filter(Alter > 30 & Alter < 41) %>% pull(Alter)
+queen_fitted <- data.frame(Alter = alter,
+                           f0 = predict(queen.lm, data.frame(Alter = alter)))
+ggplot(queen %>% filter(Alter > 30 & Alter < 41)) +
+  aes(x = Alter, y = f0) + 
+  geom_point(size = 4) + 
+  geom_abline(slope = coef(queen.lm)[2], intercept = coef(queen.lm)[1], color = "blue") + 
+  geom_point(data = queen_fitted, color = "red", size = 4) + 
+  geom_segment(aes(x = 31, y = 261.5, xend = 31, yend = 254.9), lty = "dashed") + 
+  geom_segment(aes(x = 32, y = 259.6, xend = 32, yend = 253.8), lty = "dashed") + 
+  geom_segment(aes(x = 33, y = 248.9, xend = 33, yend = 252.8), lty = "dashed") + 
+  geom_segment(aes(x = 34, y = 257.0, xend = 34, yend = 251.7), lty = "dashed") + 
+  geom_segment(aes(x = 35, y = 243.0, xend = 35, yend = 250.6), lty = "dashed") + 
+  geom_segment(aes(x = 37, y = 235.5, xend = 37, yend = 248.5), lty = "dashed") + 
+  geom_segment(aes(x = 38, y = 224.8, xend = 38, yend = 247.4), lty = "dashed") + 
+  geom_segment(aes(x = 39, y = 237.6, xend = 39, yend = 246.3), lty = "dashed") + 
+  geom_segment(aes(x = 40, y = 228.7, xend = 40, yend = 245.2), lty = "dashed")
+```
 
+Der Abstand zwischen den tatsächlichen und geschätzten Werten wird berechnet als die Summe über die quadrierten Residuals und heißt deshalb auch **sum of squares of error** (SSE). Das Verfahren, mit dem die Parameter der Regressionslinie geschätzt werden, heißt **least squares**, weil es versucht, die SSE so klein wie möglich zuhalten. Das führt dazu, dass die Regressionslinie so durch die Daten gelegt wird, dass alle Datenpunkte so nah wie möglich an der Linie sind.
 
+Die Residuals können mit `resid()` ausgegeben werden:
 
-```{r, eval = F}
-head(midwest)
-ggplot(midwest) + aes(x = area, y = poptotal) + geom_point()
-ggplot(midwest) + aes(x = state, y = area) + geom_boxplot()
-ggplot(msleep) + aes(x = vore, y = awake) + geom_boxplot()
+```{r}
+resid(queen.lm)
+```
+
+SSE kann mit `deviance()` berechnet werden:
+
+```{r}
+deviance(queen.lm)
+```
+
+## Annahmen überprüfen
+
+Statistische Modelle wie die lineare Regression basieren auf Annahmen bezüglich der Daten, die erfüllt sein müssen, damit das Ergebnis des Modells überhaupt aussagekräftig ist. Im Falle der linearen Regression beziehen sich die Annahmen auf die Residuals.
+
+### Normalität der Residuals
+
+Die erste Annahme ist, dass die Residuals normalverteilt sind. Wir überprüfen das mit einem Q-Q-Plot:
+
+```{r}
+ggplot(augment(queen.lm)) + 
+  aes(sample = .resid) + 
+  stat_qq() + 
+  stat_qq_line() + 
+  ylab("samples") + 
+  xlab("theoretical quantiles")
+```
+
+Das sieht okay, aber nicht perfekt aus. Wir erstellen noch eine Wahrscheinlichkeitsverteilung mit überlagerter Normalverteilung:
+
+```{r}
+ggplot(augment(queen.lm)) + 
+  aes(x = .resid) + 
+  geom_density() + 
+  xlim(-40, 40) + 
+  xlab("residuals")
+  stat_function(fun = dnorm, 
+                args = list(mean = mean(augment(queen.lm)$.resid), sd = sd(augment(queen.lm)$.resid)), 
+                inherit.aes = F, 
+                color = "blue")
+```
+
+Wenn wir uns jetzt immer noch unschlüssig sind, können wir noch einen Shapiro-Wilk Test durchführen:
+
+```{r}
+shapiro.test(augment(queen.lm)$.resid)
+```
+
+Da der p-Wert hier höher ist als $\alpha = 0.05$, scheinen die Residuals normalverteilt zu sein.
+
+### Konstante Varianz der Residuals
+
+Die zweite Annahme besagt, dass die Varianz der Residuals für alle geschätzten Werte ähnlich sein sollte. Diese Annahme hat auch den schönen Namen **Homoskedastizität**. Wenn die Annahme nicht erfüllt wird, spricht man von **Heteroskedastizität**. Um die Varianz visuell darzustellen, plotten wir die Residuals gegen die geschätzten Werte. Da der Mittelwert der Residuals immer bei ungefähr Null liegt (gestrichelte Linie in der Abbildung bei $y = 0$), können wir die konstante Varianz daran erkennen, dass sich die Punkte gleichmäßig um diesen Mittelwert verteilen.
+
+```{r}
+ggplot(augment(queen.lm)) + 
+  aes(x = .fitted, y = .resid) + 
+  geom_point() +
+  xlab("geschätzte f0-Werte") + 
+  ylab("Residuals") + 
+  geom_hline(yintercept = 0, lty = "dashed")
+```
+
+Da wir hier nur sehr wenige Datenpunkte haben, ist es schwierig einzuschätzen, ob es in dem Plot ein erkennbares Muster gibt, das darauf hinweisen würde, dass die Errors keine konstante Varianz hätten. Die zwei Ausreißer oben rechts sind jedenfalls kein gutes Zeichen, der Rest sieht okay aus. Um Ihre Intuition dafür zu schulen, was gute und schlechte Residual Plots sind, empfehle ich die Abbildungen 6.2 und 6.3 in Winter (2020) (s. [Kapitel 2](#statistik-in-r-literatur)).
+
+## Alle Ergebnisse von `lm()` verstehen
+
+### Geschätzte y-Werte und Residuals
+
+Wie Sie vielleicht bemerkt haben, habe ich die Funktion `augment()` benutzt, um die Ergebnisse des linearen Modells in `ggplot2` nutzen zu können. Diese Funktion stammt aus dem Paket [`broom`](https://cran.r-project.org/web/packages/broom/vignettes/broom.html), das wir anfangs geladen haben und das noch zwei weitere hilfreiche Funktionen bereitstellt: `tidy()` und `glance()`. Das Ergebnis dieser Funktionen ist immer eine `tibble`, also ein Objekt, das wir easy weiterverarbeiten können (im Gegensatz zu den seltsamen Regressionsobjekten):
+
+```{r}
+class(queen.lm)
+class(augment(queen.lm))
+```
+
+Schauen wir uns zuerst an, was `augment()` macht:
+
+```{r}
+augment(queen.lm)
+```
+
+Diese Funktion hängt an die originalen Daten (Spalten `f0` und `Alter`) weitere Spalten an, nämlich die gefitteten (also die vom Modell geschätzten) f0-Werte `.fitted`, die Residuals `.resid`, und weitere, die erstmal nicht interessant für uns sind.
+
+### Regressionskoeffizienten und t-Statistik
+
+Die Funktion `tidy()` gibt eine Tabelle für die geschätzten Regressionskoeffizienten zurück:
+
+```{r}
+tidy(queen.lm)
+```
+
+Sie erkennen hier die Spalte `estimate` wieder: diese enthält die Schätzungen für Intercept (erste Zeile) und Slope (zweite Zeile). Die Spalte `std.error` enthält den sogenannten **Standard Error**, ein Maß für die Genauigkeit der Schätzung. Hier wollen wir möglichst kleine Werte (in Relation zum Estimate), weil das bedeutet, das die Schätzungen des Modells für die Regressionskoeffizienten präzise sind. Es folgt eine Spalte mit der Teststatistik `statistic`. Bisher haben wir noch nicht über die statistische Signifikanz der Regression gesprochen. Hier wird ein **t-Test** durchgeführt, um herauszufinden, ob die Schätzungen der Regressionskoeffizienten signifikant von Null abweichen. Wenn die Regressionskoeffizienten nahe Null sind, tragen sie nichts dazu bei, den $y$-Wert vorherzusagen (erinnern Sie sich an die Formel für die Regressionslinie: Wenn $k$ oder $b$ gleich Null sind, haben sie keinen Einfluss auf die Regressionslinie). Der Wert in der Spalte `statistic`, der in diesem Fall auch **t-Wert** genannt wird, wird berechnet als `estimate / std.error`, so z.B. für die Slope:
+
+```{r}
+as.numeric(tidy(queen.lm)[2, "estimate"] / tidy(queen.lm)[2, "std.error"])
+```
+
+Die $t$-Statistik hat ihre eigene Wahrscheinlichkeitsdichteverteilung, die wir mit der Funktion `dt()` in `ggplot2` zeichnen lassen können. Diese Funktion bekommt ein Argument namens `df`, das steht für **degrees of freedom** (Freiheitsgrade). Die Freiheitsgrade sind hier üblicherweise die Größe der Stichprobe minus die Anzahl der Koeffizienten, also hier `nrow(queen) - 2`.
+
+```{r}
+ggplot() +
+  xlim(-5, 5) +
+  stat_function(fun = dnorm) +
+  stat_function(fun = dt, args = list(df = 28), col = "orange") +
+  stat_function(fun = dt, args = list(df = 5), col = "darkgreen") +
+  xlab("") + ylab("density")
+```
+
+Hier sehen Sie die t-Verteilung in orange gegen die schwarze Normalverteilung mit Mittelwert Null und Standardabweichung Eins; die beiden Verteilungen sind sich sehr ähnlich. Mit abnehmenden Freiheitsgeraden (zum Beispiel 5 Freiheitsgrade bei der dunkelgrünen Verteilung) werden sich die Normal- und t-Verteilung unähnlicher. Wie Sie wissen, ist die Fläche unter diesen Verteilungen immer 1, d.h. auch bei der t-Verteilung können wir mittels einer Funktion berechnen, wie groß die Wahrscheinlichkeit ist, dass ein Wert in einen bestimmten Wertebereich fällt. In Anlehnung an `qnorm()` heißt die Funktion für die t-Verteilung `qt()`. So können wir unter Einsatz des t-Werts und der Freiheitsgrade den p-Wert berechnen (hier wieder für die Slope):
+
+```{r}
+2 * pt(abs(-8.016248), df = 28, lower.tail = F)
+```
+
+**Tipp**: Die wissenschaftliche Notation können Sie mit `format(scientific = F)` ausschreiben lassen (aber Achtung: das Ergebnis ist dann ein Schriftzeichenobjekt, keine Zahl):
+
+```{r}
+format(9.929356e-09, scientific = F)
+```
+
+Der p-Wert kann hier wie folgt interpretiert werden: Wenn wir davon ausgehen, dass die tatsächliche Slope Null ist (das ist die Null-Hypothese), dann ist die hier beobachtete Steigung von -1.074 höchst unerwartet.
+
+### Gütekriterien für das Modell und F-Statistik
+
+Nun, da wir die Ausgabe von `tidy()` verstehen, bleibt nur noch `glance()`. Die Funktion `glance()` zeigt auf einen Blick ein paar Kriterien, mit denen man die Güte des Modells einschätzen kann:
+
+```{r}
+glance(queen.lm)
+```
+
+Der Wert `r.squared` ist genau das, was der Name sagt: der quadrierte Korrelationswert $r$, den wir oben mit `cor()` berechnet hatten:
+
+```{r}
+cor(queen$Alter, queen$f0)^2
+```
+
+**$R^2$** beschreibt die Proportion der Varianz in den Daten, die von dem berechneten Modell beschrieben wird. Hier wird also ca. 70% der Varianz in den Daten durch das Modell mit einem Prädiktor (einer unabhängigen Variable) beschrieben. In der Linguistik sind viel niedrigere $R^2$-Werte üblicher, weil unser Untersuchungsgegenstand häufig von vielen zufälligen Faktoren beeinflusst wird, die wir nicht erfassen können. Der Wert `adj.r.squared` ist eine Form des $R^2$, die für die Anzahl der unabhängigen Variablen normalisiert, denn je mehr unabhängige Variablen im Modell sind, desto höher wird $R^2$ automatisch (aber eben nicht wegen der erklärenden Kraft der Variablen). Da es hier nur eine Variable gibt, sind sich $R^2$ und *adjusted* $R^2$ sehr ähnlich.
+
+Die Spalte `sigma` enthält den **Residual Standard Error**, d.h. eine Schätzung für die Standardabweichung der Fehlerverteilung. Diesen Wert können wir mit `sigma()` berechnen:
+
+```{r}
+sigma(queen.lm)
+```
+
+Dann sehen wir wieder eine `statistic` samt `p.value`. Hier handelt es sich um eine **$F$-Statistik**, d.h. diesmal lesen wir den p-Wert aus der F-Verteilung ab, die mit `df()` in `ggplot2` gezeichnet werden kann. Diese Verteilung ist von zwei Parametern abhängig, nämlich `glance(queen.lm)$df` und `glance(queen.lm)$df.residual`. Dies sind die Freiheitsgrade für das Modell und für die Residuals. In orange sehen Sie wieder die F-Verteilung, die zu unseren Daten passt (nämlich mit einem Freiheitsgrad für das Modell und 28 Freiheitsgraden für die Residuals). Die Verteilung kann nur Werte größer als Null annehmen. In dunkelgrün sehen Sie eine Verteilung, bei der die Freiheitsgrade für das Modell verändert wurden, und in schwarz die Normalverteilung.
+
+```{r}
+ggplot(data.frame(x = 0:5)) +
+  aes(x) +
+  stat_function(fun = dnorm) +
+  stat_function(fun = df, args = list(df1 = 1, df2 = 28), col = "orange") +
+  stat_function(fun = df, args = list(df1 = 7, df2 = 28), col = "darkgreen") +
+  xlab("") + ylab("density")
+```
+
+Wenn wir uns hier die orange Verteilung anschauen, sehen wir schon, dass ein $F$-Wert von 64.3 (s. `statistic`) extrem unwahrscheinlich wäre, daher ist der p-Wert auch sehr klein. Die Null-Hypothese im F-Test, der hier ausgeführt wurde, lautet, dass ein Modell ohne Prädiktoren die Daten genauso gut oder besser erklärt, als das Modell mit dem Prädiktor `Alter`. Das heißt, wenn der p-Wert, der aus dem F-Test resultiert sehr klein ist, können wir daraus schließen, dass unser Modell mit der unabhängigen Variable `Alter` die Daten besser erklärt, als ein Modell ohne Prädiktoren.
+
+Wir versuchen nun die Werte in den Spalten `statistic`, `df`, `df.residual` und `deviance` nachzuvollziehen. Letzteren kennen Sie schon unter dem Namen **SSE** (*sum of squared error*): 
+
+```{r}
+SSE <- deviance(queen.lm)
+SSE
+```
+
+`df` ist wie bereits angedeutet die Anzahl der Freiheitsgrade des Modells und wird berechnet als die Anzahl der Regressionskoeffizienten $k$ minus 1:
+
+```{r}
+k <- length(queen.lm$coefficients)
+df.SSR <- k-1
+df.SSR
+```
+
+`df.residual` ist die Anzahl der Freiheitsgrade der Residuals, die als die Anzahl der Beobachtungen $N$ minus die Anzahl der Regressionskoeffizienten $k$ berechnet wird. Wie Sie am Variablennamen `df.SSE` sehen können
+
+```{r}
+N <- nrow(queen)
+df.SSE <- N-k
+df.SSE
+```
+
+Um zuletzt noch den $F$-Wert in der Spalte `statistic` nachvollziehen zu können, schauen wir uns die Formel dafür an: $F = \frac{MSR}{MSE}$. Hierbei steht **MSR** für *mean squares of regression* und **MSE** für *mean squares of error*. Diese beiden Werte beschreiben die Varianz der geschätzten y-Werte und die Varianz der Residuals. Um MSE und MSR berechnen zu können, müssen wir zuerst zwei andere Werte berechnen: *sum of squares of Y* (**SSY**), die den Abstand der Datenpunkte zum Mittelwert von $y$ beschreibt, und *sum of squares of regression* (**SSR**), die den Unterschied zwischen SSY und SSR beschreibt. Zuerst SSY:
+
+```{r}
+SSY <- sum((queen$f0 - mean(queen$f0))^2)
+SSY
+```
+
+In der Praxis ist SSY die Summe aller Abstände zwischen den schwarzen (tatsächlich gemessenen) Datenpunkten und der orangen Linie, die die y-Achse bei `mean(queen$f0)` schneidet und eine Steigung von Null hat (diese Abbildung zeigt wieder nur einen Ausschnitt aus dem gesamten Wertebereich):
+
+```{r}
+alter <- queen %>% filter(Alter > 30 & Alter < 41) %>% pull(Alter)
+queen_fitted <- data.frame(Alter = alter,
+                           f0 = predict(queen.lm, data.frame(Alter = alter)))
+ggplot(queen %>% filter(Alter > 30 & Alter < 41)) +
+  aes(x = Alter, y = f0) + 
+  geom_point(size = 4) + 
+  geom_abline(slope = coef(queen.lm)[2], intercept = coef(queen.lm)[1], color = "blue") + 
+  geom_abline(slope = 0, intercept = mean(queen$f0), color = "orange") + 
+  geom_point(data = queen_fitted, color = "red", size = 4) + 
+  geom_segment(aes(x = 31, y = 261.5, xend = 31, yend = 254.9), lty = "dashed") + 
+  geom_segment(aes(x = 32, y = 259.6, xend = 32, yend = 253.8), lty = "dashed") + 
+  geom_segment(aes(x = 33, y = 248.9, xend = 33, yend = 252.8), lty = "dashed") + 
+  geom_segment(aes(x = 34, y = 257.0, xend = 34, yend = 251.7), lty = "dashed") + 
+  geom_segment(aes(x = 35, y = 243.0, xend = 35, yend = 250.6), lty = "dashed") + 
+  geom_segment(aes(x = 37, y = 235.5, xend = 37, yend = 248.5), lty = "dashed") + 
+  geom_segment(aes(x = 38, y = 224.8, xend = 38, yend = 247.4), lty = "dashed") + 
+  geom_segment(aes(x = 39, y = 237.6, xend = 39, yend = 246.3), lty = "dashed") + 
+  geom_segment(aes(x = 40, y = 228.7, xend = 40, yend = 245.2), lty = "dashed")
+```
+
+Sie können hier schon rein visuell sehen, dass die orange Linie die Daten viel schlechter beschreibt als die blaue Regressionslinie, deshalb ist SSY auch viel größer als SSE.
+
+Für SSR müssen wir nun nur noch die Differenz von SSY und SSE bilden:
+
+```{r}
+SSR <- SSY - SSE
+SSR
+```
+
+Nun können wir endlich MSE und MSR berechnen:
+
+```{r}
+MSE <- SSE/df.SSE
+MSE
+MSR <- SSR/df.SSR
+MSR
+```
+
+...Und aus der Division von MSE und MSR entsteht der $F$-Wert:
+
+```{r}
+F_wert <- MSR / MSE
+F_wert
+```
+
+Zwischen der $t$-Statistik aus [Kapitel 4.6.2](#regressionskoeffizienten-und-t-statistik) und unserer $F$-Statistik hier besteht übrigens ein quadratischer Zusammenhang: $F = t^2$ bzw. $t = \sqrt{F}$
+
+```{r}
+sqrt(F_wert)
+```
+
+Deshalb ist auch der p-Wert bei beiden Statistiken genau derselbe.
+
+## Ergebnis berichten
+
+Nun haben wir alle (für uns relevanten) Ergebnisse aus `lm()` nachvollzogen. Wir haben dies mittels der `broom` Funktionen gemacht. Eine traditionellere Art der Übersicht über die Ergebnisse der linearen Regression bietet `summary()`:
+
+```{r}
+summary(queen.lm)
+```
+
+Sie sollten hier aber jetzt alle Zahlen wiedererkennen.
+
+Es ist außerordentlich wichtig, dass wir unser Ergebnis korrekt berichten. Dafür benötigen wir 
+
+- $R^2$ (oder, weil stabiler: *adjusted* $R^2$): 0.69
+- den $F$-Wert: 64.3
+- die Freiheitsgrade für das Modell und die Residuals: 1 und 28
+- den p-Wert, bzw. das nächst höhere Signifikanzniveau: p < 0.001
+
+Wir berichten: **Es besteht eine signifikante lineare Beziehung zwischen dem Alter der Queen und ihrer Grundfrequenz ($R^2$ = 0.69, $F$[1, 28] = 64.3, $p$ < 0.001).**
+
+# Multiple Regression
+
+Bislang haben wir an einer Studie gearbeitet, bei der eine kontinuierliche Variable (Grundfrequenz) durch eine weitere kontinuierliche Variable (Alter in Jahren) vorhergesagt wurde. Viel häufiger haben wir aber mehrere Variablen, von denen wir vermuten, dass sie einen Einfluss auf unsere Messwerte haben. Hierfür brauchen wir dann die multiple lineare Regression.
+
+Dieses Mal interessiert uns, ob die Lautstärke in Dezibel (`int$db`) von dem Vokaltyp (`int$V`) und dem Geschlecht des Sprechers (`int$G`) beeinflusst wird.
+
+```{r}
+int <- read.table(file.path(url, "dbwort.df.txt"))
+head(int)
+dim(int)
+```
+
+Wir machen uns ein Bild von der Lage:
+
+```{r}
+ggplot(int) + 
+  aes(x = V, y = db, fill = G) + 
+  geom_boxplot()
+```
+
+Der Plot zeigt, dass die Lautstärke in Vokalen von Frauen niedriger ist als von Männern. Außerdem scheint die Lautstärke generall niedriger zu sein in /i/ als in /a/, besonders bei männlichen Sprechern. Das heißt hier könnte eine Interaktion zwischen den unabhängigen Variablen vorliegen. Zuerst schauen wir uns aber an, was passiert, wenn wir uns erstmal nicht um die Interaktion kümmern.
+
+## Ohne Interaktionen
+
+Wenn es in einem Modell keine Interaktionen gibt, werden die unabhängigen Variablen in der `lm()`-Formel mit einem Plus verbunden.
+
+```{r}
+int.lm <- lm(db ~ G + V, data = int)
+tidy(int.lm)
 ```
 
 
-- Intercepts and slopes
-- neue Werte vorhersagen (sinnvoll=interpolation und unsinnvoll=extrapolation)
-- residuals
-- Annahmen: Normalität, konstante Varianz
-- R^2
-- Intercept-only model (wo intercept == mean und slop == 0)
+
+## Mit Interaktionen
+
+Interaktionen in einem linearen Modell können auf zwei Arten geschrieben werden: entweder mit einem Asterisk `G * V` oder in der ausformulierten Variante `G + V + G:V`. Bei drei unabhängigen Variablen `A`, `B` und `C` kann es sowohl Interaktionen zwischen zwei als auch zwischen allen drei Faktoren vorliegen, also: `A * B * C` oder `A + B + C + A:B + A:C + B:C + A:B:C`.
+
+```{r}
+int.lm <- lm(db ~ G * V, data = int)
+tidy(int.lm)
+```
 
 # Mixed Models (LMERs)
+
+
 
 
 
