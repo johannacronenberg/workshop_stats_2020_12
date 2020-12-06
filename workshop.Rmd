@@ -814,7 +814,9 @@ Wir berichten: **Es besteht eine signifikante lineare Beziehung zwischen dem Alt
 
 # Multiple Regression
 
-Bislang haben wir an einer Studie gearbeitet, bei der eine kontinuierliche Variable (Grundfrequenz) durch eine weitere kontinuierliche Variable (Alter in Jahren) vorhergesagt wurde. Viel häufiger haben wir aber mehrere Variablen, von denen wir vermuten, dass sie einen Einfluss auf unsere Messwerte haben. Hierfür brauchen wir dann die multiple lineare Regression.
+Bislang haben wir an einer Studie gearbeitet, bei der eine kontinuierliche Variable (Grundfrequenz) durch eine weitere kontinuierliche Variable (Alter in Jahren) vorhergesagt wurde. Viel häufiger haben wir aber mehrere Variablen, von denen wir vermuten, dass sie einen Einfluss auf unsere Messwerte haben. Hierfür brauchen wir dann die multiple lineare Regression. Die Formel für die lineare Regression wird so angepasst, dass es entsprechend viele Slopes gibt:
+
+$y = k + b_0x + b_1x + ...$
 
 Dieses Mal interessiert uns, ob die Lautstärke in Dezibel (`int$db`) von dem Vokaltyp (`int$V`) und dem Geschlecht des Sprechers (`int$G`) beeinflusst wird.
 
@@ -840,25 +842,190 @@ Wenn es in einem Modell keine Interaktionen gibt, werden die unabhängigen Varia
 
 ```{r}
 int.lm <- lm(db ~ G + V, data = int)
+tidy(int.lm) %>% select(term, estimate)
+```
+
+Hier versuchen wir zu verstehen, was genau die Estimates bedeuten (denn die Statistiken haben wir schon im vorigen Kapitel behandelt). Die Schätzung für das Intercept ist auch in der multiplen Regression das arithmetische Mittel für $b_0 = 0$ und $b_1 = 0$. Da wir es hier aber nicht mit numerisch-kontinuierlichen unabhängigen Variablen zu tun haben, sondern mit kategorialen, müssen wir erstmal herausfinden, welche Werte von `G` und `V` in dem Modell als Null und welche als Eins interpretiert werden. Dies bestimmt R durch das sogenannte **Treatment Coding** (auch oft mit dem Überbegriff Dummy Coding bezeichnet). Die Variable `G` kann als Werte entweder `f` (*female*) oder `m` (*male*) annehmen. R geht dann alphabetisch vor und bestimmt, dass `f` als Null und `m` als Eins interpretiert werden soll. Genauso läuft es bei den Vokalen `V`, wo `a` als Null und `i` als Eins interpretiert wird. Dementsprechend ist das Intercept in dieser Regression der geschätzte Dezibel-Mittelwert für das `a` von Frauen. Dies können wir rechnerisch leicht nachvollziehen:
+
+```{r}
+intercept <- int.lm %>% 
+  augment %>% 
+  dplyr::filter(V == "a" & G == "f") %>% 
+  dplyr::summarise(mean = mean(.fitted)) %>% 
+  as.numeric
+intercept
+```
+
+Wie Sie sehen, heißen die beiden Slopes in unserem Modell `Gm` und `Vi`. Hierbei wird immer zuerst der Faktor genannt und dann das Level des Faktors, das *nicht* im Intercept verarbeitet wurde. Wenn wir wissen wollen, wie wir die geschätzten Mittelwerte für die Kombinationen *female-i*, *male-a* und *male-i* bekommen, müssen wir nur Additionen ausführen (erinnern Sie sich an die Formel für die Regressionslinie!): 
+
+```{r}
+var_i <- tidy(int.lm) %>% dplyr::filter(term == "Vi") %>% pull(estimate)
+var_m <- tidy(int.lm) %>% dplyr::filter(term == "Gm") %>% pull(estimate)
+# female-i
+intercept + var_i
+# male-a
+intercept + var_m
+# male-i
+intercept + var_m + var_i
+```
+
+Die `predict()`-Funktion kann uns diese Rechenarbeit aber auch abnehmen:
+
+```{r}
+data <- data.frame(G = c("f", "f", "m", "m"), V = c("a", "i", "a", "i"))
+data$estimated_mean <- predict(int.lm, data)
+data
+```
+
+Wenn eine der unabhängigen Variablen mehr als zwei Stufen gehabt hätte (also wenn z.B. noch ein dritter Vokal /o/ im Datensatz vorkäme), dann gäbe es eine weitere Slope für diese Stufe (also z.B. `Vo`). Es gibt auch noch andere Arten des Dummy Coding (z.B. *Sum Coding*), die Sie in der gängigen Literatur recherchieren können.
+
+Jetzt schauen wir uns erst noch die statistischen Ergebnisse unserer multiplen Regression an:
+
+```{r}
 tidy(int.lm)
 ```
 
+Diese Übersicht zeigt, dass es einen signifikanten Einfluss von Geschlecht ($t$ = 8.0, $p$ < 0.001) und von Vokal ($t$ = 5.3, $p$ < 0.001) auf die Lautstärke gab. Nun schauen wir uns noch die Gütekriterien an:
 
+```{r}
+glance(int.lm)
+```
+
+Hier sehen wir, dass durch die beiden unabhängigen Variablen Geschlecht und Vokal ca. 43% der Varianz in den Dezibelmessungen beschrieben werden kann. Der F-Test zeigt, dass unser Regressionsmodell die Daten erfolgreicher beschreibt als ein Modell ohne Prädiktoren (ein Intercept-only Modell) ($R^2$ = 0.43, $F$[2, 117] = 45.8, $p$ < 0.001). 
+
+*(Natürlich würden wir unter realistischen Bedingungen hier noch die Annahmen über die Residuals prüfen!)*
 
 ## Mit Interaktionen
 
-Interaktionen in einem linearen Modell können auf zwei Arten geschrieben werden: entweder mit einem Asterisk `G * V` oder in der ausformulierten Variante `G + V + G:V`. Bei drei unabhängigen Variablen `A`, `B` und `C` kann es sowohl Interaktionen zwischen zwei als auch zwischen allen drei Faktoren vorliegen, also: `A * B * C` oder `A + B + C + A:B + A:C + B:C + A:B:C`.
+### Regressionskoeffizienten & Statistiken
+
+Als wir uns die Daten zuvor als Boxplots angeschaut haben, haben wir festgestellt, dass die Dezibelwerte einer Interaktion unterliegen könnten. Interaktionen in einem linearen Modell können auf zwei Arten geschrieben werden: entweder mit einem Asterisk `G * V` oder in der ausformulierten Variante `G + V + G:V`. Bei drei unabhängigen Variablen `A`, `B` und `C` kann es sowohl Interaktionen zwischen zwei als auch zwischen allen drei Faktoren vorliegen, also: `A * B * C` oder `A + B + C + A:B + A:C + B:C + A:B:C`.
 
 ```{r}
 int.lm <- lm(db ~ G * V, data = int)
+tidy(int.lm) %>% select(term, estimate)
+```
+
+Da Modelle mit Interaktionen deutlich schwieriger zu interpretieren sind als solche ohne, sollten Sie sich immer genügend Zeit nehmen, um die Estimates in ihrer Bedeutung zu interpretieren, bevor Sie sich auf den p-Wert stürzen. Das Intercept beschreibt hier immer noch den geschätzten Dezibel-Mittelwert für /a/ von Frauen. Da es jetzt eine Interaktion zwischen den unabhängigen Variablen gibt, können wir die Slopes `Gm` und `Vi` nicht mehr genauso interpretieren, wie wir es oben getan haben. Diese beschreiben jetzt sogenannte **simple effects** und nicht mehr die **main effects**, die sie im Modell ohne Interaktionen beschrieben haben. `Gm` beschreibt jetzt die geschätzte Differenz zwischen Männern und Frauen für den Vokal /a/. `Vi` beschreibt die geschätzte Differenz zwischen /a/ und /i/ für Frauen. Hier sehen Sie, wie Sie in diesem komplizierten Modell die geschätzten Mittelwerte für alle Faktorkombinationen berechnen:
+
+```{r}
+intercept <- tidy(int.lm) %>% dplyr::filter(term == "(Intercept)") %>% pull(estimate)
+var_m <- tidy(int.lm) %>% dplyr::filter(term == "Gm") %>% pull(estimate)
+var_i <- tidy(int.lm) %>% dplyr::filter(term == "Vi") %>% pull(estimate)
+interaction <- tidy(int.lm) %>% dplyr::filter(term == "Gm:Vi") %>% pull(estimate)
+
+# female-a
+intercept
+# female-i
+intercept + var_i
+# male-a
+intercept + var_m
+# male-i
+intercept + var_m + var_i + interaction
+```
+
+Die `predict()`-Funktion kann Ihnen hier wieder die Rechenarbeit abnehmen:
+
+```{r}
+data <- data.frame(G = c("f", "f", "m", "m"), V = c("a", "i", "a", "i"))
+data$estimated_mean <- predict(int.lm, data)
+data
+```
+
+Nun schauen wir uns die $t$-Statistik an, die zeigt, ob unsere Regressionskoeffizienten dazu beitragen, die Varianz in den Dezibelwerten zu erklären:
+
+```{r}
 tidy(int.lm)
 ```
 
+Offensichtlich gab es einen signifikanten Einfluss von Geschlecht ($t$ = 7.7, $p$ < 0.001) und einen fast signifikanten Einfluss des Vokals ($t$ = 1.9, $p$ = 0.06) auf die Dezibelwerte, sowie eine signifikante Interaktion zwischen den Faktoren ($t$ = 2.8, $p$ < 0.01).
+
+Da wir unser Modell im Vergleich zu vorher verfeinert haben, sollten die geschätzten Mittelwerte für die Faktorkombinationen nun näher an den tatsächlichen Mittelwerten liegen als in dem Modell ohne Interaktion:
+
+```{r}
+int %>% group_by(G, V) %>% dplyr::summarise(m = mean(db))
+```
+
+Dies zeigt sich auch in der $F$-Statistik:
+
+```{r}
+glance(int.lm)
+```
+
+Nun werden ca. 46% der Varianz in den Daten durch die beiden Faktoren und ihre Interaktion beschrieben. Das Modell mit der Interaktion beschreibt also mehr Varianz als das Modell ohne Interaktion; d.h. es liefert präzisere Schätzungen der Regressionskoeffizienten. Der F-Test zeigt außerdem, dass das Regressionsmodell die Daten besser beschreibt als das Intercept-only Modell ($R^2$ = 0.46, $F$[3, 116] = 34.7, $p$ < 0.001).
+
+*(Natürlich würden wir unter realistischen Bedingungen hier noch die Annahmen über die Residuals prüfen!)*
+
+### Post-hoc Tests
+
+Wenn in einer Regression die Interaktion einen signifikanten Effekt auf die gemessene Variable hat, dann sollte man sogenannte **post-hoc Tests** ausführen. Dafür eignet sich das [Paket `emmeans`](https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html) mit der gleichnamigen Funktion außerordentlich gut. Für dieses Paket gibt es mehrere ausführliche Vignetten, deshalb werden wir hier nicht auf Details eingehen. Die Funktion `emmeans()` führt t-Tests auf alle Kombinationen der Werte der kategorialen unabhängigen Variablen aus. So finden wir heraus, welche Kombination(en) dafür sorgen, dass die Interaktion in der Regression signifikant war. Als Argumente bekommt die Funktion das Ergebnis des Regressionsmodells, und dann die Formel `pairwise ~ V | G`. Die Formel bedeutet hier, dass pro Geschlecht der Unterschied zwischen den Vokalen und dessen Signifikanz ermittelt werden soll (sprich: *V given G*).
+
+```{r}
+emmeans(int.lm, pairwise ~ V | G)
+```
+
+Das Ergebnis dieser Funktion sind zwei Tabellen, eine namens `$emmeans` und eine namens `contrasts`. In der Tabelle `$emmeans`, Spale `emmean` finden Sie unsere Schätzungen für die Mittelwerte wieder, zuerst für Frauen (`G = f`), dann für Männer (`G = m`). `emmeans` steht für *estimated marginal means*. Sie finden hier zusätzlich den Standard Error `SE`, die Freiheitsgrade `df`, sowie das 95%-Konfindenzinterval `lower.CL` und `upper.CL`.
+
+In der Tabelle `contrasts` finden Sie die Differenzen zwischen /a/ und /i/, zuerst für Frauen, dann für Männer. Zuerst wird Ihnen hierfür wieder ein `estimate` angezeigt. Dieser ist ganz einfach die Differenz aus den `emmeans` für /a/ und /i/ pro Geschlecht. Es folgen Standard Error `SE` und dann die Freiheitsgrade `df`, der t-Wert `t.ratio` und der p-Wert `p.value`. Hier sehen wir im Einklang mit den Boxplots, die wir ganz zu Anfang dieses Kapitels erstellt haben, dass es keinen signifikanten Lautstärke-Unterschied zwischen /a/ und /i/ für Frauen gibt ($t$[116] = 1.9, p = 0.06), sehrwohl aber für Männer ($t$[116] = 5.8, p < 0.001). 
+
+Nun sollten wir zusätzlich schauen, ob es pro Vokaltyp signifikante Unterschiede zwischen Frauen und Männern gab. Dafür verändern wir einfach die Formel zu `pairwise ~ G | V` (*G given V*):
+
+```{r}
+emmeans(int.lm, pairwise ~ G | V)
+```
+
+Hier können wir berichten, dass sowohl für /a/ ($t$[116] = 7.7, p < 0.001) als auch für /i/ ($t$[116] = 3.8, p < 0.001) ein signifikanter Unterschied zwischen Männern und Frauen vorliegt. Das stimmt ebenfalls mit unserem visuellen Eindruck aus den anfänglichen Boxplots überein.
+
 # Mixed Models (LMERs)
 
+Mit einem Linear Mixed Effect Model (auch: Linear Mixed Effect Regression oder LMER) wird geprüft, ob eine kontinuierliche oder kategoriale Variable von einem oder mehreren unabhängigen Faktoren beeinflusst wird. Diese Art von Modellen wird als "gemischt" (*mixed*) bezeichnet, weil sowohl Faktoren, deren Einfluss auf die abhängige Variable für die Forschenden interessant sind (**Fixed Effects**), als auch Faktoren, deren Einfluss uninteressant sind (**Random Effects**), Teil des Modells sein können. Die Fixed Effects in einem Mixed Models können sowohl kategorial als auch numerisch sein.
+
+Damit erweitern wir die einfache und multiple lineare Regression, die nur Fixed Effects als Prädiktoren genutzt haben. In der Phonetik und Linguistik werden häufig die StudienteilnehmerInnen und Items oder Wörter als Random Effects im LMER verwendet. Das liegt daran, dass wir eine *zufällige* Auswahl an Probanden und/oder Wörtern einer bestimmten Sprache auswählen und hoffen, dass sich die Ergebnisse auf andere Probanden und/oder Wörter derselben Sprache übertragen lassen. Dieser zufällige Auswahlprozess hat zur Folge, dass wir *noise* in unser Experiment bringen, das wir dann mittels LMER wieder herausrechnen können. Schauen wir uns nochmal den Data Frame aus [Kapitel 5](#multiple-regression) an:
+
+```{r}
+head(int)
+```
+
+Hier haben wir die SprecherInnen in Spalte `Vpn` und die Wörter in Spalte `Wort`. Mit Boxplots schauen wir, ob es nennenswerte Variationen der Dezibelwerte zwischen den Sprechern und/oder zwischen den Wörtern gibt:
+
+```{r}
+ggplot(int) + 
+  aes(x = Vpn, y = db) + 
+  geom_boxplot()
+ggplot(int) + 
+  aes(x = Wort, y = db) + 
+  geom_boxplot()
+```
+
+Da es hier z.T. große Lautstärke-Unterschiede zwischen einzelnen Sprechern und zwischen einzelnen Wörtern gibt, ist es unbedingt notwendig, dass wir im Mixed Model mit Random Effects arbeiten. Ein zweiter äußerst wichtiger Grund für Random Effects ist, dass wir häufig sogenannte *repeated measure* Experimente durchführen, bei denen mehrere Datenpunkte von demselben Probanden und/oder Wort stammen. Das bedeutet, dass die Datenpunkte nicht mehr **unabhängig** von einander sind (zum Beispiel: Datenpunkte von demselben Probanden werden häufig näher zusammenliegen als solche von unterschiedlichen Probanden). Dies ist jedoch eine der wichtigsten Annahmen in Regressionsmodellen (das habe ich bei der einfachen und multiplen Regression verschwiegen)!
+
+Bei der einfachen und multiplen linearen Regression haben wir ein Intercept berechnet und dann eine Slope pro unabhängiger Variable (pro Fixed Effect). Bei den gemischten Modellen wird dasselbe gemacht, aber jetzt berechnen wir auch noch für die Random Effects jeweils Intercepts und Slopes.
+
+## Random Intercepts
+
+```{r}
+ggplot(int) + # %>% dplyr::filter(Vpn %in% c("S4", "S8"))) + 
+  aes(x = V, y = db) + 
+  geom_point() + 
+  facet_wrap(~Vpn) + 
+  geom_point(data = int %>% # dplyr::filter(Vpn %in% c("S8", "S4")) %>% 
+               group_by(Vpn, V) %>% dplyr::summarise(db = mean(db)),
+             color = "orange", size = 3, stroke = 2, shape = 4) + 
+  geom_line(data = int %>% # dplyr::filter(Vpn %in% c("S8", "S4")) %>% 
+               group_by(Vpn, V) %>% dplyr::summarise(db = mean(db)),
+            aes(x = V, y = db, group = Vpn),
+             lty = "dashed")
+```
 
 
+## Random Slopes
 
-
+```{r}
+int.lmer <- lmer(db ~ G * V + (V | Vpn) + (G | Wort), data = int)
+summary(int.lmer)
+int.step <- step(int.lmer)
+int.step
+anova(get_model(int.step))
+```
 
 
