@@ -20,6 +20,8 @@ div.green {background-color: #ecffeb; border-radius: 5px; padding: 20px;}
 
 # Preliminaries
 
+Dieses Dokument und eventuelle Updates finden Sie in einem [*github repository*](https://github.com/johannacronenberg/workshop_stats_2020_12).
+
 ## Setup
 
 - Laden Sie die [Statistik-Software R](https://ftp.fau.de/cran/) herunter und installieren Sie sie. Die aktuellste Version ist `4.0.x`.
@@ -31,7 +33,8 @@ div.green {background-color: #ecffeb; border-radius: 5px; padding: 20px;}
 - Installieren Sie die folgenden Packages (und updaten Sie alle bislang installierten Packages, s. letzter Punkt in dieser Aufzählung):
 
 ```{r, eval = F}
-install.packages(c("Rcpp", "rmarkdown", "gridExtra", "tidyverse", "rlang", "magrittr", "lme4", "lmerTest", "ez", "emmeans", "broom"), dependencies = T)
+install.packages(c("Rcpp", "rmarkdown", "gridExtra", "tidyverse", "rlang", "magrittr", 
+                   "lme4", "lmerTest", "ez", "emmeans", "broom", "MuMIn"), dependencies = T)
 ```
 
 - Sollte der obige Befehl den Fehler `installation of package had non-zero exit status` werfen, hat die Installation nicht geklappt. Für Windows kann es sein, dass Sie in diesem Fall zusätzlich [Rtools](https://cran.r-project.org/bin/windows/Rtools/) installieren müssen. Für MacOS müssen Sie ggf. die *XCode command-line tools* installieren und/oder resetten. Öffnen Sie dafür ein Mac Terminal und führen Sie folgende Befehle aus:
@@ -51,6 +54,7 @@ library(broom)
 library(ez)
 library(lmerTest)
 library(emmeans)
+library(MuMIn)
 ```
 
 - Bitte überprüfen Sie regelmäßig, ob Ihre Packages Updates benötigen -- die Updates werden in R nicht automatisch eingespielt! Klicken Sie hierfür in der Werkzeugleiste auf `Tools > Check for Package Updates`. Auch RStudio selbst erhält ab und zu Updates, dies können Sie überprüfen mit `Help > Check for Updates`. Sie sollten außerdem stets mit der neuesten R Version arbeiten, das ist derzeit `4.0.x` (Stand: 15. November 2020). Sie können Ihre R Version überprüfen mit `getRversion()`. Besuchen Sie einfach in regelmäßigen Abständen die [R Webseite](https://ftp.fau.de/cran/) und schauen Sie, ob eine neue stabile Version verfügbar ist.
@@ -193,16 +197,24 @@ whisker_Q1
 whisker_Q3 <- Q3 + 1.5 * iqr
 whisker_Q3
 # Ende des unteren Whiskers
-whisker_Q1_end <- dauer_y %>% dplyr::filter(dur > whisker_Q1 & dur < Q1) %>% dplyr::summarise(d = min(dur)) %>% pull(d)
+whisker_Q1_end <- dauer_y %>% 
+  dplyr::filter(dur > whisker_Q1 & dur < Q1) %>% 
+  dplyr::summarise(d = min(dur)) %>% 
+  pull(d)
 whisker_Q1_end
 # in diesem Fall stimmt folgendes:
 whisker_Q1_end == min(dauer_y$dur)
 # Ende des oberen Whiskers
-whisker_Q3_end <- dauer_y %>% dplyr::filter(dur < whisker_Q3 & dur > Q3) %>% dplyr::summarise(d = max(dur)) %>% pull(d)
+whisker_Q3_end <- dauer_y %>% 
+  dplyr::filter(dur < whisker_Q3 & dur > Q3) %>% 
+  dplyr::summarise(d = max(dur)) %>% 
+  pull(d)
 whisker_Q3_end
 # hier sind der höchste Datenpunkt und der Ende des Whiskers nicht derselbe Punkt
 whisker_Q3_end == max(dauer_y$dur)
-outliers <- dauer_y %>% dplyr::filter(dur > whisker_Q3) %>% pull(dur)
+outliers <- dauer_y %>%
+  dplyr::filter(dur > whisker_Q3) %>% 
+  pull(dur)
 outliers
 ```
 
@@ -295,7 +307,7 @@ Zuletzt schauen wir uns noch den **Shapiro-Wilk Test** an, weil das der am häuf
 shapiro.test(dauer$logDur)
 ```
 
-Die Null-Hypothese dieses Tests ist, dass die Daten tatsächlich normalverteilt sind. Wenn der **p-Wert** unter dem allgemein anerkannten Signifikanzniveau von $\alpha = 0.05$ liegt, müssen wir diese Hypothese ablehnen und daher davon ausgehen, dass die Daten nicht normalverteilt sind. Unsere logarithmierten Dauerwerte sind laut diesem Test also nicht normalverteilt. Für den Shapiro-Wilk Test sollte ihr Datensatz aus weniger als 5000 Beobachtungen bestehen und nicht zu viele Ausreißer oder identische Werte besitzen, da dies die Aussagekraft des Ergebnisses stark beeinflussen kann.
+Die Null-Hypothese dieses Tests ist, dass die Daten tatsächlich normalverteilt sind. Wenn der **p-Wert** unter dem allgemein anerkannten Signifikanzniveau von $\alpha = 0.05$ liegt, müssen wir diese Hypothese ablehnen und daher davon ausgehen, dass die Daten nicht normalverteilt sind. Unsere logarithmierten Dauerwerte sind laut diesem Test also nicht normalverteilt. Für den Shapiro-Wilk Test sollte Ihr Datensatz aus weniger als 5000 Beobachtungen bestehen und nicht zu viele Ausreißer oder identische Werte besitzen, da dies die Aussagekraft des Ergebnisses stark beeinflussen kann.
 
 ### Konfidenzintervall & 68–95–99.7 rule
 
@@ -361,14 +373,14 @@ pnorm(-2) - pnorm(-3)
 pnorm(3) - pnorm(2)
 ```
 
-In der Statistik interessieren wir uns häufig dafür, ob Daten in das **Konfidenzintervall** fallen, meist wird vom 95%-Konfidenzintervall gesprochen. Das heißt bei normalverteilten Daten prüfen wir, ob ein Datenpunkt in den Wertebereich $\mu \pm 2\sigma$ fällt. Um wiederum herauszufinden, welcher Wertebereich das genau ist, nutzen wir `qnorm()`, wieder Mittelwert und Standardabweichung als Argumente bekommt und zusätzlich die Fläche unter der Verteilung. Wenn wir symmetrisch um den Mittelwert eine Fläche von insgesamt 0.95 haben wollen, ist die Fläche am linken und rechten Rand der Verteilung jeweils $(1 - 0.95) / 2 = 0.025$. Für unsere Normalverteilung oben können wir dann berechnen:
+In der Statistik interessieren wir uns häufig dafür, ob Daten in das **Konfidenzintervall** fallen, meist wird vom 95%-Konfidenzintervall gesprochen. Das heißt bei normalverteilten Daten prüfen wir, ob ein Datenpunkt in den Wertebereich $\mu \pm 2\sigma$ fällt. Um wiederum herauszufinden, welcher Wertebereich das genau ist, nutzen wir die `qnorm()` Funktion, die wieder Mittelwert und Standardabweichung als Argumente bekommt und zusätzlich die Fläche unter der Verteilung. Wenn wir symmetrisch um den Mittelwert eine Fläche von insgesamt 0.95 haben wollen, ist die Fläche am linken und rechten Rand der Verteilung jeweils $(1 - 0.95) / 2 = 0.025$. Für unsere Normalverteilung oben können wir dann berechnen:
 
 ```{r}
 qnorm(0.025)
 qnorm(1-0.025)
 ```
 
-Das heißt für die Normalverteilung mit Mittelwert Null und Standardabweichung 1 liegt eine Fläche von 0.95 zwischen -1.96 und 1.96. Oben hatten wir gesagt, dass die Fläche von 0.95 aber $\mu \pm2\sigma$ entspricht -- genauer hätten wir schreiben müssen $\mu \pm 1.96\sigma$.
+Das heißt für die Normalverteilung mit Mittelwert Null und Standardabweichung Eins liegt eine Fläche von 0.95 zwischen -1.96 und 1.96. Oben hatten wir gesagt, dass die Fläche von 0.95 aber $\mu \pm2\sigma$ entspricht -- genauer hätten wir schreiben müssen $\mu \pm 1.96\sigma$.
 
 ### Empirische Verteilung
 
@@ -442,7 +454,7 @@ In der folgenden Abbildung sehen Sie drei Regressionslinien: blau und grün habe
 
 ```{r}
 ggplot() + 
-  xlim(-2, 2) + ylim(-2, 4) + xlab("x") + ylab("y") +
+  xlim(-0.5, 1) + ylim(-0.5, 3) + xlab("x") + ylab("y") +
   geom_abline(slope = 0.5, intercept = 1, color = "blue") + 
   geom_abline(slope = -0.5, intercept = 1, color = "darkgreen") + 
   geom_abline(slope = 0.5, intercept = 2, color = "orange") + 
@@ -502,7 +514,7 @@ Die Koeffizienten lassen sich separat auch mit `coef()` ausgeben:
 coef(queen.lm)
 ```
 
-Wir sehen also, dass das geschätzte Intercept bei 288.2 liegt und die Steigung bei -1.07. Die Steigung wird leider verwirrenderweise immer wie die $x$-Variable genannt, in diesem Fall also "Alter". Die Koeffizienten bedeuten folgendes: Bei einem Alter von Null Jahren ($x = 0$) liegt die Grundfrequenz wahrscheinlich bei ca. 288 Hz. Mit jeden weiteren Jahr ($x$ wird um 1 erhöht) sinkt die Grundfrequenz um 1.07 Hz. Indem wir Intercept und Slope in unsere Formel von vorhin einsetzen, können wir nun für alle möglichen Alter die entsprechende Grundfrequenz vorhersagen:
+Wir sehen also, dass das geschätzte Intercept bei 288.2 liegt und die Steigung bei -1.07. Die Steigung wird leider verwirrenderweise immer wie die $x$-Variable genannt, in diesem Fall also "Alter". Die Koeffizienten bedeuten folgendes: Bei einem Alter von Null Jahren ($x = 0$) liegt die mittlere Grundfrequenz wahrscheinlich bei ca. 288 Hz. Mit jeden weiteren Jahr ($x$ wird um 1 erhöht) sinkt die Grundfrequenz um 1.07 Hz. Indem wir Intercept und Slope in unsere Formel von vorhin einsetzen, können wir nun für alle möglichen Alter die entsprechende Grundfrequenz vorhersagen:
 
 ```{r}
 x <- c(0, 40, 50)
@@ -543,7 +555,8 @@ ggplot(queen %>% filter(Alter > 30 & Alter < 41)) +
   geom_segment(aes(x = 37, y = 235.5, xend = 37, yend = 248.5), lty = "dashed") + 
   geom_segment(aes(x = 38, y = 224.8, xend = 38, yend = 247.4), lty = "dashed") + 
   geom_segment(aes(x = 39, y = 237.6, xend = 39, yend = 246.3), lty = "dashed") + 
-  geom_segment(aes(x = 40, y = 228.7, xend = 40, yend = 245.2), lty = "dashed")
+  geom_segment(aes(x = 40, y = 228.7, xend = 40, yend = 245.2), lty = "dashed") + 
+  scale_x_continuous(breaks = seq(30, 40, by = 2))
 ```
 
 Der Abstand zwischen den tatsächlichen und geschätzten Werten wird berechnet als die Summe über die quadrierten Residuals und heißt deshalb auch **sum of squares of error** (SSE). Das Verfahren, mit dem die Parameter der Regressionslinie geschätzt werden, heißt **least squares**, weil es versucht, die SSE so klein wie möglich zuhalten. Das führt dazu, dass die Regressionslinie so durch die Daten gelegt wird, dass alle Datenpunkte so nah wie möglich an der Linie sind.
@@ -584,7 +597,7 @@ ggplot(augment(queen.lm)) +
   aes(x = .resid) + 
   geom_density() + 
   xlim(-40, 40) + 
-  xlab("residuals")
+  xlab("residuals") +
   stat_function(fun = dnorm, 
                 args = list(mean = mean(augment(queen.lm)$.resid), sd = sd(augment(queen.lm)$.resid)), 
                 inherit.aes = F, 
@@ -658,7 +671,7 @@ ggplot() +
   xlab("") + ylab("density")
 ```
 
-Hier sehen Sie die t-Verteilung in orange gegen die schwarze Normalverteilung mit Mittelwert Null und Standardabweichung Eins; die beiden Verteilungen sind sich sehr ähnlich. Mit abnehmenden Freiheitsgeraden (zum Beispiel 5 Freiheitsgrade bei der dunkelgrünen Verteilung) werden sich die Normal- und t-Verteilung unähnlicher. Wie Sie wissen, ist die Fläche unter diesen Verteilungen immer 1, d.h. auch bei der t-Verteilung können wir mittels einer Funktion berechnen, wie groß die Wahrscheinlichkeit ist, dass ein Wert in einen bestimmten Wertebereich fällt. In Anlehnung an `qnorm()` heißt die Funktion für die t-Verteilung `qt()`. So können wir unter Einsatz des t-Werts und der Freiheitsgrade den p-Wert berechnen (hier wieder für die Slope):
+Hier sehen Sie die t-Verteilung in orange gegen die schwarze Normalverteilung mit Mittelwert Null und Standardabweichung Eins; die beiden Verteilungen sind sich sehr ähnlich. Mit abnehmenden Freiheitsgeraden (zum Beispiel 5 Freiheitsgrade bei der dunkelgrünen Verteilung) werden sich die Normal- und t-Verteilung unähnlicher. Wie Sie wissen, ist die Fläche unter diesen Verteilungen immer 1, d.h. auch bei der t-Verteilung können wir mittels einer Funktion berechnen, wie groß die Wahrscheinlichkeit ist, dass ein Wert in einen bestimmten Wertebereich fällt. In Anlehnung an `pnorm()` heißt die Funktion für die t-Verteilung `pt()`. So können wir unter Einsatz des t-Werts und der Freiheitsgrade den p-Wert berechnen (hier wieder für die Slope):
 
 ```{r}
 2 * pt(abs(-8.016248), df = 28, lower.tail = F)
@@ -670,14 +683,15 @@ Hier sehen Sie die t-Verteilung in orange gegen die schwarze Normalverteilung mi
 format(9.929356e-09, scientific = F)
 ```
 
-Der p-Wert kann hier wie folgt interpretiert werden: Wenn wir davon ausgehen, dass die tatsächliche Slope Null ist (das ist die Null-Hypothese), dann ist die hier beobachtete Steigung von -1.074 höchst unerwartet.
+Der p-Wert kann hier wie folgt interpretiert werden: Wenn wir davon ausgehen, dass die tatsächliche Slope Null ist (das ist die Null-Hypothese), dann ist die hier beobachtete Steigung von -1.07 höchst unerwartet.
 
 ### Gütekriterien für das Modell und F-Statistik
 
 Nun, da wir die Ausgabe von `tidy()` verstehen, bleibt nur noch `glance()`. Die Funktion `glance()` zeigt auf einen Blick ein paar Kriterien, mit denen man die Güte des Modells einschätzen kann:
 
 ```{r}
-glance(queen.lm)
+glance(queen.lm)[, 1:6]
+glance(queen.lm)[, 7:12]
 ```
 
 Der Wert `r.squared` ist genau das, was der Name sagt: der quadrierte Korrelationswert $r$, den wir oben mit `cor()` berechnet hatten:
@@ -705,7 +719,7 @@ ggplot(data.frame(x = 0:5)) +
   xlab("") + ylab("density")
 ```
 
-Wenn wir uns hier die orange Verteilung anschauen, sehen wir schon, dass ein $F$-Wert von 64.3 (s. `statistic`) extrem unwahrscheinlich wäre, daher ist der p-Wert auch sehr klein. Die Null-Hypothese im F-Test, der hier ausgeführt wurde, lautet, dass ein Modell ohne Prädiktoren die Daten genauso gut oder besser erklärt, als das Modell mit dem Prädiktor `Alter`. Das heißt, wenn der p-Wert, der aus dem F-Test resultiert sehr klein ist, können wir daraus schließen, dass unser Modell mit der unabhängigen Variable `Alter` die Daten besser erklärt, als ein Modell ohne Prädiktoren.
+Wenn wir uns hier die orange Verteilung anschauen, sehen wir schon, dass ein $F$-Wert von 64.3 (s. `statistic`) extrem unwahrscheinlich wäre, daher ist der p-Wert auch sehr klein. Die Null-Hypothese im F-Test, der hier ausgeführt wurde, lautet, dass ein Modell ohne Prädiktoren die Daten genauso gut oder besser erklärt, als das Modell mit dem Prädiktor `Alter`. Das heißt, wenn der p-Wert, der aus dem F-Test resultiert, sehr klein ist, können wir daraus schließen, dass unser Modell mit der unabhängigen Variable `Alter` die Daten besser erklärt, als ein Modell ohne Prädiktoren.
 
 Wir versuchen nun die Werte in den Spalten `statistic`, `df`, `df.residual` und `deviance` nachzuvollziehen. Letzteren kennen Sie schon unter dem Namen **SSE** (*sum of squared error*): 
 
@@ -757,7 +771,8 @@ ggplot(queen %>% filter(Alter > 30 & Alter < 41)) +
   geom_segment(aes(x = 37, y = 235.5, xend = 37, yend = 248.5), lty = "dashed") + 
   geom_segment(aes(x = 38, y = 224.8, xend = 38, yend = 247.4), lty = "dashed") + 
   geom_segment(aes(x = 39, y = 237.6, xend = 39, yend = 246.3), lty = "dashed") + 
-  geom_segment(aes(x = 40, y = 228.7, xend = 40, yend = 245.2), lty = "dashed")
+  geom_segment(aes(x = 40, y = 228.7, xend = 40, yend = 245.2), lty = "dashed") + 
+  scale_x_continuous(breaks = seq(30, 40, by = 2))
 ```
 
 Sie können hier schon rein visuell sehen, dass die orange Linie die Daten viel schlechter beschreibt als die blaue Regressionslinie, deshalb ist SSY auch viel größer als SSE.
@@ -801,7 +816,7 @@ Nun haben wir alle (für uns relevanten) Ergebnisse aus `lm()` nachvollzogen. Wi
 summary(queen.lm)
 ```
 
-Sie sollten hier aber jetzt alle Zahlen wiedererkennen.
+Sie sollten hier alle Zahlen wiedererkennen.
 
 Es ist außerordentlich wichtig, dass wir unser Ergebnis korrekt berichten. Dafür benötigen wir 
 
@@ -888,7 +903,8 @@ tidy(int.lm)
 Diese Übersicht zeigt, dass es einen signifikanten Einfluss von Geschlecht ($t$ = 8.0, $p$ < 0.001) und von Vokal ($t$ = 5.3, $p$ < 0.001) auf die Lautstärke gab. Nun schauen wir uns noch die Gütekriterien an:
 
 ```{r}
-glance(int.lm)
+glance(int.lm)[, 1:6]
+glance(int.lm)[, 7:12]
 ```
 
 Hier sehen wir, dass durch die beiden unabhängigen Variablen Geschlecht und Vokal ca. 43% der Varianz in den Dezibelmessungen beschrieben werden kann. Der F-Test zeigt, dass unser Regressionsmodell die Daten erfolgreicher beschreibt als ein Modell ohne Prädiktoren (ein Intercept-only Modell) ($R^2$ = 0.43, $F$[2, 117] = 45.8, $p$ < 0.001). 
@@ -906,7 +922,7 @@ int.lm <- lm(db ~ G * V, data = int)
 tidy(int.lm) %>% select(term, estimate)
 ```
 
-Da Modelle mit Interaktionen deutlich schwieriger zu interpretieren sind als solche ohne, sollten Sie sich immer genügend Zeit nehmen, um die Estimates in ihrer Bedeutung zu interpretieren, bevor Sie sich auf den p-Wert stürzen. Das Intercept beschreibt hier immer noch den geschätzten Dezibel-Mittelwert für /a/ von Frauen. Da es jetzt eine Interaktion zwischen den unabhängigen Variablen gibt, können wir die Slopes `Gm` und `Vi` nicht mehr genauso interpretieren, wie wir es oben getan haben. Diese beschreiben jetzt sogenannte **simple effects** und nicht mehr die **main effects**, die sie im Modell ohne Interaktionen beschrieben haben. `Gm` beschreibt jetzt die geschätzte Differenz zwischen Männern und Frauen für den Vokal /a/. `Vi` beschreibt die geschätzte Differenz zwischen /a/ und /i/ für Frauen. Hier sehen Sie, wie Sie in diesem komplizierten Modell die geschätzten Mittelwerte für alle Faktorkombinationen berechnen:
+Da Modelle mit Interaktionen deutlich schwieriger zu interpretieren sind als solche ohne, sollten Sie sich immer genügend Zeit nehmen, um die Estimates in ihrer Bedeutung zu interpretieren, bevor Sie sich auf den p-Wert stürzen. Das Intercept beschreibt hier immer noch den geschätzten Dezibel-Mittelwert für /a/ von Frauen. Da es jetzt eine Interaktion zwischen den unabhängigen Variablen gibt, können wir die Slopes `Gm` und `Vi` nicht mehr genauso interpretieren, wie wir es oben getan haben. `Gm` beschreibt jetzt die geschätzte Differenz zwischen Männern und Frauen für den Vokal /a/. `Vi` beschreibt die geschätzte Differenz zwischen /a/ und /i/ für Frauen. Hier sehen Sie, wie Sie in diesem komplizierten Modell die geschätzten Mittelwerte für alle Faktorkombinationen berechnen:
 
 ```{r}
 intercept <- tidy(int.lm) %>% dplyr::filter(term == "(Intercept)") %>% pull(estimate)
@@ -949,7 +965,8 @@ int %>% group_by(G, V) %>% dplyr::summarise(m = mean(db))
 Dies zeigt sich auch in der $F$-Statistik:
 
 ```{r}
-glance(int.lm)
+glance(int.lm)[, 1:6]
+glance(int.lm)[, 7:12]
 ```
 
 Nun werden ca. 46% der Varianz in den Daten durch die beiden Faktoren und ihre Interaktion beschrieben. Das Modell mit der Interaktion beschreibt also mehr Varianz als das Modell ohne Interaktion; d.h. es liefert präzisere Schätzungen der Regressionskoeffizienten. Der F-Test zeigt außerdem, dass das Regressionsmodell die Daten besser beschreibt als das Intercept-only Modell ($R^2$ = 0.46, $F$[3, 116] = 34.7, $p$ < 0.001).
@@ -958,15 +975,21 @@ Nun werden ca. 46% der Varianz in den Daten durch die beiden Faktoren und ihre I
 
 ### Post-hoc Tests
 
-Wenn in einer Regression die Interaktion einen signifikanten Effekt auf die gemessene Variable hat, dann sollte man sogenannte **post-hoc Tests** ausführen. Dafür eignet sich das [Paket `emmeans`](https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html) mit der gleichnamigen Funktion außerordentlich gut. Für dieses Paket gibt es mehrere ausführliche Vignetten, deshalb werden wir hier nicht auf Details eingehen. Die Funktion `emmeans()` führt t-Tests auf alle Kombinationen der Werte der kategorialen unabhängigen Variablen aus. So finden wir heraus, welche Kombination(en) dafür sorgen, dass die Interaktion in der Regression signifikant war. Als Argumente bekommt die Funktion das Ergebnis des Regressionsmodells, und dann die Formel `pairwise ~ V | G`. Die Formel bedeutet hier, dass pro Geschlecht der Unterschied zwischen den Vokalen und dessen Signifikanz ermittelt werden soll (sprich: *V given G*).
+Wenn in einer Regression die Interaktion einen signifikanten Effekt auf die gemessene Variable hat, dann sollte man sogenannte **post-hoc Tests** ausführen. Dafür eignet sich das Paket [`emmeans`](https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html) mit der gleichnamigen Funktion außerordentlich gut. Für dieses Paket gibt es mehrere ausführliche Vignetten, deshalb werden wir hier nicht auf Details eingehen. Die Funktion `emmeans()` führt t-Tests auf alle Kombinationen der Werte der kategorialen unabhängigen Variablen aus. So finden wir heraus, welche Kombination(en) dafür sorgen, dass die Interaktion in der Regression signifikant war. Als Argumente bekommt die Funktion das Ergebnis des Regressionsmodells, und dann die Formel `pairwise ~ V | G`. Die Formel bedeutet hier, dass pro Geschlecht der Unterschied zwischen den Vokalen und dessen Signifikanz ermittelt werden soll (sprich: *V given G*).
 
 ```{r}
 emmeans(int.lm, pairwise ~ V | G)
 ```
 
-Das Ergebnis dieser Funktion sind zwei Tabellen, eine namens `$emmeans` und eine namens `contrasts`. In der Tabelle `$emmeans`, Spale `emmean` finden Sie unsere Schätzungen für die Mittelwerte wieder, zuerst für Frauen (`G = f`), dann für Männer (`G = m`). `emmeans` steht für *estimated marginal means*. Sie finden hier zusätzlich den Standard Error `SE`, die Freiheitsgrade `df`, sowie das 95%-Konfindenzinterval `lower.CL` und `upper.CL`.
+Das Ergebnis dieser Funktion sind zwei Tabellen, eine namens `$emmeans` und eine namens `contrasts`. In der Tabelle `$emmeans`, Spalte `emmean` finden Sie unsere Schätzungen für die Mittelwerte wieder, zuerst für Frauen (`G = f`), dann für Männer (`G = m`). `emmeans` steht für *estimated marginal means*. Sie finden hier zusätzlich den Standard Error `SE`, die Freiheitsgrade `df`, sowie das 95%-Konfindenzinterval `lower.CL` und `upper.CL`.
 
-In der Tabelle `contrasts` finden Sie die Differenzen zwischen /a/ und /i/, zuerst für Frauen, dann für Männer. Zuerst wird Ihnen hierfür wieder ein `estimate` angezeigt. Dieser ist ganz einfach die Differenz aus den `emmeans` für /a/ und /i/ pro Geschlecht. Es folgen Standard Error `SE` und dann die Freiheitsgrade `df`, der t-Wert `t.ratio` und der p-Wert `p.value`. Hier sehen wir im Einklang mit den Boxplots, die wir ganz zu Anfang dieses Kapitels erstellt haben, dass es keinen signifikanten Lautstärke-Unterschied zwischen /a/ und /i/ für Frauen gibt ($t$[116] = 1.9, p = 0.06), sehrwohl aber für Männer ($t$[116] = 5.8, p < 0.001). 
+In der Tabelle `contrasts` finden Sie die Differenzen zwischen /a/ und /i/, zuerst für Frauen, dann für Männer. Zuerst wird Ihnen hierfür wieder ein `estimate` angezeigt. Dieser ist ganz einfach die Differenz aus den `emmeans` für /a/ und /i/ pro Geschlecht. Es folgen Standard Error `SE` und dann die Freiheitsgrade `df`, der t-Wert `t.ratio` und der p-Wert `p.value`. Hier sehen wir im Einklang mit den Boxplots, die wir ganz zu Anfang dieses Kapitels erstellt haben, dass es keinen signifikanten Lautstärke-Unterschied zwischen /a/ und /i/ für Frauen gibt ($t$[116] = 1.9, $p$ = 0.06), sehr wohl aber für Männer ($t$[116] = 5.8, $p$ < 0.001).
+
+```{r}
+ggplot(int) + 
+  aes(x = V, y = db, fill = G) + 
+  geom_boxplot()
+```
 
 Nun sollten wir zusätzlich schauen, ob es pro Vokaltyp signifikante Unterschiede zwischen Frauen und Männern gab. Dafür verändern wir einfach die Formel zu `pairwise ~ G | V` (*G given V*):
 
@@ -974,11 +997,11 @@ Nun sollten wir zusätzlich schauen, ob es pro Vokaltyp signifikante Unterschied
 emmeans(int.lm, pairwise ~ G | V)
 ```
 
-Hier können wir berichten, dass sowohl für /a/ ($t$[116] = 7.7, p < 0.001) als auch für /i/ ($t$[116] = 3.8, p < 0.001) ein signifikanter Unterschied zwischen Männern und Frauen vorliegt. Das stimmt ebenfalls mit unserem visuellen Eindruck aus den anfänglichen Boxplots überein.
+Hier können wir berichten, dass sowohl für /a/ ($t$[116] = 7.7, $p$ < 0.001) als auch für /i/ ($t$[116] = 3.8, $p$ < 0.001) ein signifikanter Unterschied zwischen Männern und Frauen vorliegt. Das stimmt ebenfalls mit unserem visuellen Eindruck aus den anfänglichen Boxplots überein.
 
 # Mixed Models (LMERs)
 
-Mit einem Linear Mixed Effect Model (auch: Linear Mixed Effect Regression oder LMER) wird geprüft, ob eine kontinuierliche oder kategoriale Variable von einem oder mehreren unabhängigen Faktoren beeinflusst wird. Diese Art von Modellen wird als "gemischt" (*mixed*) bezeichnet, weil sowohl Faktoren, deren Einfluss auf die abhängige Variable für die Forschenden interessant sind (**Fixed Effects**), als auch Faktoren, deren Einfluss uninteressant sind (**Random Effects**), Teil des Modells sein können. Die Fixed Effects in einem Mixed Models können sowohl kategorial als auch numerisch sein.
+Mit einem Linear Mixed Effect Model (auch: Linear Mixed Effect Regression oder LMER) wird geprüft, ob eine kontinuierliche oder kategoriale Variable von einem oder mehreren unabhängigen Faktoren beeinflusst wird. Diese Art von Modellen wird als "gemischt" (*mixed*) bezeichnet, weil sowohl Faktoren, deren Einfluss auf die abhängige Variable für die Forschenden interessant sind (**Fixed Effects**), als auch Faktoren, deren Einfluss uninteressant sind (**Random Effects**), Teil des Modells sein können. Die Fixed Effects in einem Mixed Models können sowohl kategorial als auch numerisch sein, die Random Effects ausschließlich kategorial.
 
 Damit erweitern wir die einfache und multiple lineare Regression, die nur Fixed Effects als Prädiktoren genutzt haben. In der Phonetik und Linguistik werden häufig die StudienteilnehmerInnen und Items oder Wörter als Random Effects im LMER verwendet. Das liegt daran, dass wir eine *zufällige* Auswahl an Probanden und/oder Wörtern einer bestimmten Sprache auswählen und hoffen, dass sich die Ergebnisse auf andere Probanden und/oder Wörter derselben Sprache übertragen lassen. Dieser zufällige Auswahlprozess hat zur Folge, dass wir *noise* in unser Experiment bringen, das wir dann mittels LMER wieder herausrechnen können. Schauen wir uns nochmal den Data Frame aus [Kapitel 5](#multiple-regression) an:
 
@@ -999,33 +1022,116 @@ ggplot(int) +
 
 Da es hier z.T. große Lautstärke-Unterschiede zwischen einzelnen Sprechern und zwischen einzelnen Wörtern gibt, ist es unbedingt notwendig, dass wir im Mixed Model mit Random Effects arbeiten. Ein zweiter äußerst wichtiger Grund für Random Effects ist, dass wir häufig sogenannte *repeated measure* Experimente durchführen, bei denen mehrere Datenpunkte von demselben Probanden und/oder Wort stammen. Das bedeutet, dass die Datenpunkte nicht mehr **unabhängig** von einander sind (zum Beispiel: Datenpunkte von demselben Probanden werden häufig näher zusammenliegen als solche von unterschiedlichen Probanden). Dies ist jedoch eine der wichtigsten Annahmen in Regressionsmodellen (das habe ich bei der einfachen und multiplen Regression verschwiegen)!
 
-Bei der einfachen und multiplen linearen Regression haben wir ein Intercept berechnet und dann eine Slope pro unabhängiger Variable (pro Fixed Effect). Bei den gemischten Modellen wird dasselbe gemacht, aber jetzt berechnen wir auch noch für die Random Effects jeweils Intercepts und Slopes.
+Bei der einfachen und multiplen linearen Regression haben wir ein Intercept berechnet und dann eine Slope pro unabhängiger Variable (pro Fixed Effect). Bei den gemischten Modellen wird dasselbe gemacht, aber jetzt schätzen wir zusätzlich noch für die Random Effects jeweils Intercepts und Slopes. Um die Konzepte **Random Intercept** und **Random Slope** zu erklären, konzentrieren wir uns hier erstmal auf `Vpn` als Random Effect.
 
-## Random Intercepts
+## Random Intercepts vs. Random Slopes
+
+### Random Intercepts
+
+In der folgenden Abbildung sehen Sie die Dezibelwerte für die fünf weiblichen Probandinnen für die Vokale /a/ und /i/. Sie erinnern sich, dass mittels Treatment Coding der Vokal /a/ als Null und der Vokal /i/ als Eins interpretiert wird. Die Schätzung des Mittelwerts für /a/ für Frauen ist in unserem Mixed Model das Intercept. Die Kreuze in orange markieren die Dezibel-Mittelwerte pro Person und Vokal. Wenn wir uns jetzt aber die Mittelwerte für /a/ pro Sprecher anschauen, gibt es große Unterschiede (z.B. zwischen S10 und S6). Das ist ein Indikator dafür, dass es sinnvoll ist, pro Sprecher ein Intercept zu berechnen.
 
 ```{r}
-ggplot(int) + # %>% dplyr::filter(Vpn %in% c("S4", "S8"))) + 
+ggplot(int %>% dplyr::filter(G == "f")) + 
   aes(x = V, y = db) + 
   geom_point() + 
   facet_wrap(~Vpn) + 
-  geom_point(data = int %>% # dplyr::filter(Vpn %in% c("S8", "S4")) %>% 
-               group_by(Vpn, V) %>% dplyr::summarise(db = mean(db)),
+  geom_point(data = int %>% dplyr::filter(G == "f")%>% group_by(Vpn, V) %>% dplyr::summarise(db = mean(db)),
              color = "orange", size = 3, stroke = 2, shape = 4) + 
-  geom_line(data = int %>% # dplyr::filter(Vpn %in% c("S8", "S4")) %>% 
-               group_by(Vpn, V) %>% dplyr::summarise(db = mean(db)),
+  geom_line(data = int %>% dplyr::filter(G == "f")%>% group_by(Vpn, V) %>% dplyr::summarise(db = mean(db)),
             aes(x = V, y = db, group = Vpn),
              lty = "dashed")
 ```
 
+In der R Notation wird ein Random Intercept so geschrieben: `(1 | Vpn)`. Hierbei steht `1` für Intercept, ausgesprochen bedeutet die Formel so viel wie "schätze ein Intercept in Relation zu den individuellen Versuchspersonen". In der Praxis berechnet ein Mixed Model mit einem solchen Random Intercept allerdings nicht ein Intercept pro Person, sondern die Standardabweichung der Versuchspersonen-Intercepts vom geschätzten "allgemeinen" Intercept über alle Datenpunkte.
 
-## Random Slopes
+### Random Slopes
+
+In der obigen Abbildung sehen Sie neben den Mittelwerten für /a/ auch die für /i/, und eine gestrichelte Linie, die beide verbindet. Diese stellt hier sozusagen die ideale Regressionslinie pro Versuchsperson dar. Da die Linien ganz unterschiedlich steil verlaufen, können wir erahnen, dass die einzelnen Versuchspersonen unterschiedliche Slopes haben. Sprecherin S7 mach z.B. kaum einen Lautstärke-Unterschied zwischen /a/ und /i/ (ihre Slope ist ca. 0), während Sprecherin S6 das /a/ deutlich lauter produziert als das /i/ (ihre Slope ist negativ). Hier scheint es also sinnvoll zu sein, auch die Slopes sprecherspezifisch zu berechnen.
+
+Allgemein wird davon ausgegangen, dass auch ein Random Intercept geschätzt werden soll, wenn wir Random Slopes schätzen. Daher ist die Formel für Random Slopes `(1 + V | Vpn)`, also "schätze ein Intercept und eine Slope für Vokal in Relation zu den individuellen Versuchspersonen". Häufig wird anstatt dieser Notation allerdings die Kurzform `(V | Vpn)` verwendet, da für die Funktion dann klar ist, dass sowohl Random Slope als auch Random Intercept berechnet werden soll. Auch hier wird wieder die Abweichung von der "allgemeinen" Slope geschätzt, und nicht wirklich eine Slope pro Proband.
+
+Vielleicht fragen Sie sich jetzt, warum wir die ganze Zeit den Fixed Effect `G` ignorieren. Warum z.B. interessieren wir uns nicht für `(1 + V + G | Vpn)`? Das liegt daran, dass die Stufen des Faktors `G` nicht pro Versuchsperson variieren, denn die Versuchspersonen sind *entweder* männlich *oder* weiblich. Hier gibt es also gar keine Variation, die wir durch die entsprechende Random Slope herausrechnen könnten. Für die Stufen des Faktors `V` hingegen liegen jeweils Werte für die Versuchspersonen vor (die haben sowohl /a/ als auch /i/ produziert).
+
+*(Im Folgenden benutzen wir eine Random Effects Notation für `Wort`, die außer Acht lässt, dass Wort auch mit Vokal variiert, weil anscheinend sowohl /i/ als auch /a/ in jedem Wort vorkamen. Wir lassen diesen Faktor aus didaktischen Gründen weg, um die Sache nicht komplizierter zu machen als sie ist.)*
+
+## LMER in R
+
+Das klassische Paket, das für LMERs benutzt wird, heißt `lme4`. Wir nutzen hier stattdessen `lmerTest`, das aber einfach ein Wrapper für `lme4` ist. Die Funktion für das Berechnen eines Mixed Models heißt `lmer()`. Unsere vollständige Formel enthält den üblichen ersten Teil für die Fixed Effects inklusive Interaktion, und dann die Random Effects für `Vpn` und `Wort`. Dieses Mal schauen wir uns die Ergebnisse des Mixed Models mit der Funktion `summary()` an (es gibt aber auch ein Paket namens [`broom.mixed`](https://cran.r-project.org/web/packages/broom.mixed/vignettes/broom_mixed_intro.html), das die Funktionen `tidy()`, `augment()` und `glance()` für LMERs bereitstellt).
 
 ```{r}
-int.lmer <- lmer(db ~ G * V + (V | Vpn) + (G | Wort), data = int)
+int.lmer <- lmer(db ~ G * V + (1 + V | Vpn) + (1 + G | Wort), data = int, REML = F)
 summary(int.lmer)
-int.step <- step(int.lmer)
-int.step
-anova(get_model(int.step))
 ```
 
+Hier wird uns zuerst angezeigt, was genau für ein Modell berechnet und welche Formel dafür verwendet wurde. `REML` steht für *Restricted Maximum Likelihood*. Indem wir der Funktion das Argument `REML = F` gegeben haben, wird nun stattdessen eine echte Maximum Likelihood Schätzung der gewünschten Parameter ausgeführt (für eine Übersicht zum Thema REML, s. Winter (2020)). Es folgen die üblichen Kennzahlen für die Residuals. Neu für uns ist die Tabelle für die Random Effects, altbekannt ist die Tabelle für die Fixed Effects. Zuletzt werden uns hier die Korrelationen zwischen den Fixed Effects angezeigt, aber auch damit werden wir uns hier nicht beschäftigen. Stattdessen schauen wir uns zuerst die Fixed Effects nochmal genauer an.
+
+### Fixed Effects
+
+![](img/fixed_effects.png){width=70%}
+
+Diese Tabelle kommt uns bekannt vor. Wir sehen die Schätzung für das Intercept und dann die Schätzungen für die Slopes `Gm`, `Vi` und die Interaktion `Gm:Vi`. Der geschätzte dB-Mittelwert für das /a/ von Frauen liegt bei 48.2 dB. Männer sprechen offenbar deutlich lauter, denn die Slope für `Gm` ist hoch und positiv. Das heißt das /a/ von Männern liegt bei ca. `48.2 + 40.2 = 88.4` dB. Der Vokal /i/ wird hingegen leiser produziert als /a/, denn die Slope ist negativ mit -10 dB. Zuletzt sehen wir dass für das /i/ von Männern nochmal 20.2 dB abgezogen werden müssen, das heißt der geschätzte Mittelwert für das /i/ von Männern liegt bei `48.2 + 40.2 + (-10.0) + (-20.2) = 58.2` dB. 
+
+Dazu werden uns die Standard Errors gegeben und die Ergebnisse der $t$-Statistik. Hier sehen wir, dass das Geschlecht einen signifikanten Einfluss auf die produzierte Lautstärke hat und dass es eine signifikante Interaktion zwischen Geschlecht und Vokal gab. Der Vokal hatte hingegen keinen signifikanten Einfluss auf die Lautstärke.
+
+*Da es eine signifikante Interaktion gibt, würden wir hier unter realistischen Bedingungen noch post-hoc Tests mit `emmeans` ausführen.*
+
+### Random Effects
+
+![](img/random_effects.png){width=70%}
+
+Nun schauen wir uns die Random Effects genauer an. Zuerst sehen wir, dass für den Random Factor `Vpn` die Varianz und Standardabweichung der Intercepts und Slopes mit Relation zum Vokal geschätzt wurden. Die Standardabweichung für die sprecherspezifischen Intercepts liegt hier bei 14.7 dB, d.h. die Sprechervariation um das "allgemeine" Intercept von 48.2 dB liegt bei $\pm 14.7$ dB, was in Relation recht viel ist. Die Sprechervariation um die "allgemeine" Slope für `Vi` von -10 dB liegt bei 10.4 dB. Zusätzlich sehen wir dann aber in der Spalte `Corr` den Korrelationskoeffizienten $r$ für die Korrelation zwischen dem Random Intercept und der Random Slope. Da die Korrelation hier negativ ist, bedeutet das, dass Probanden mit einem höheren Intercept eine steilere negative Slope für /i/ haben. Wenn also jemand das /a/ besonders laut produziert, produzierten sie auch ein leiseres /i/ (Achtung: wir beschreiben hier keine Kausalität, sondern eine Korrelation!).
+
+Das heißt also, durch die Formel `(1 + V | Vpn)` wurden drei Parameter geschätzt: Ein Random Intercept, eine Random Slope, und die Korrelation zwischen den beiden. Seien Sie daher vorsichtig, wenn Sie ihre eigenen Modelle konzipieren: Je mehr komplexe Random Effects Formeln Sie verwenden, desto mehr Parameter müssen geschätzt werden, und das kann zu sehr sehr langen Rechenzeiten und Konvergenzproblemen führen.
+
+Apropos Konvergenzprobleme: Schauen wir uns den Random Effect `Wort` an. Hier haben wir ebenfalls ein Random Intercept berechnet, für das eine Standardabweichung von 14.7 dB geschätzt wurde. So weit so gut. Dann sehen wir aber, dass die Random Slope eine extrem kleine Standardabweichung hat mit nur 0.3 dB. Das bedeutet, dass das Wort gar nicht mit dem Geschlecht der Versuchspersonen variiert. Das Mixed Model hat aber trotzdem versucht, die Random Slope und die Korrelation zwischen Random Intercept und Random Slope zu schätzen -- und ist gescheitert. Das sehen Sie daran, dass $r = -1$ (auch bei $r = 1$), denn eine perfekte Korrelation gibt es nicht. Die 1 oder -1 zeigt, dass die Korrelation nicht geschätzt werden konnte. Daher rührt auch mit großer Wahrscheinlichkeit der Fehler, der uns bei der Berechnung des Modells angezeigt wurde:
+
+![](img/fehler.png){width=70%}
+
+## Modell vereinfachen
+
+Für solche Fälle gibt es die `step()` Funktion. Diese Funktion schaut sich alle Fixed und Random Effects Strukturen im Modell an, und berechnet, welche davon signifikant sind und damit etwas Essentielles zum Modell beitragen und welche nicht. Die Faktoren, die nichts beitragen, werden eliminiert. So bleibt am Ende ein Modell, dass nur die statistisch relevanten Faktoren mit einbezieht. Das heißt aber im übrigen *nicht*, dass Sie nicht trotzdem Faktoren im Modell behalten können, die nicht signifikant sind! Hier sehen Sie das Ergebnis von `step()`:
+
+```{r}
+int.step <- step(int.lmer)
+int.step
+```
+
+Es kommt vor, dass die Funktion mehrfach den obigen Fehler wirft, und zwar immer dann, wenn sie ein neues Modell mit einer angepassten Formel berechnet und der Fehler immer noch da ist. Zuerst sehen wir im Ergebnis die *Backwar reduced random-effect table*. Die *backward reduction* ist ein Prozess, bei dem zuerst das komplexeste Modell ausprobiert wird und dann werden nach und nach die nicht signifikanten Terme entfernt. Hier sehen wir, dass die Random Slope `G` in dem Random Effect `(1 + G | Wort)` nicht signifikant ist, und deshalb entfernt wurde. Es bleibt daher nur noch das Random Intercept `(1 | Wort)` übrig. Auch dieses wurde nochmal evaluiert, in Zeile 3, und für wichtig befunden. Auch die Random Slope `V` in `(1 + V | Vpn)` kann bleiben. Es folgt dieselbe Prozedur für die Fixed Effects.
+
+Zuletzt zeigt uns `step()` an, welches Modell es schließlich ausgewählt hat, nämlich:
+
+`db ~ G + V + (1 + V | Vpn) + (1 | Wort) + G:V`
+
+Unsere Fixed Effects werden hier ausgeschrieben als `G + V + ... G:V`. Random Intercept und Slope für Versuchspersonen sind unverändert, und für den Random Factor `Wort` wird jetzt nur noch ein Intercept geschätzt. Mit der Funktion `get_model()` können wir uns wieder die Ergebnisse des vereinfachten Modells anzeigen lassen:
+
+```{r}
+int.lmer.new <- get_model(int.step)
+summary(int.lmer.new)
+```
+
+Zuerst bemerken wir, dass der Fehler nicht mehr auftaucht. In der Random Effects Tabelle erscheint jetzt nur noch das Random Intercept für Wort, nicht mehr die Random Slope. Der Rest ist unverändert. Nun führen wir noch die paarweisen Vergleiche mit `emmeans` aus, weil die Interaktion `Gm:Vi` signifikant ist:
+
+```{r}
+emmeans(int.lmer.new, pairwise ~ V | G)$contrasts
+```
+
+```{r}
+emmeans(int.lmer.new, pairwise ~ G | V)$contrasts
+```
+
+Wir berichten also folgendes:
+
+**Es wurde eine Linear Mixed Effect Regression durchgeführt mit der Lautstärke in Dezibel als abhängiger Variable, sowie mit den Fixed Effects für Geschlecht und Vokal inklusive der Interaktion zwischen den Faktoren, und den Random Effects für Versuchspersonen und Wörter. Für Versuchspersonen wurden sowohl Random Intercept als auch Random Slope und für Wörter nur das Random Intercept geschätzt. Das Modell ergab einen signifikanten Einfluss von Geschlecht ($t$[9.7] = 4.3, $p$ < 0.01) auf die Lautstärke. Es gab zusätzlich eine signifikante Interaktion zwischen Geschlecht und Vokal ($t$[10.0] = 3.1, $p$ < 0.05). Post-hoc t-Tests zeigten signifikante Differenzen zwischen /a/ und /i/ für Männer ($t$[12.5] = 5.8, $p$ < 0.001), aber nicht für Frauen, und signifikante Differenzen zwischen Männern und Frauen für /a/ ($t$[11.2] = 4.0, $p$ < 0.01), jedoch nicht für /i/.**
+
+## Gütekriterien für das Modell
+
+Sie haben vielleicht bemerkt, dass uns die `summary()` Funktion kein $R^2$ ausgegeben hat, wie das zuvor bei den Regressionen mit `lm()` der Fall war. Das liegt daran, dass jetzt separat für Fixed und Random Effects evaluiert werden muss, wie viel Varianz in den Daten sie jeweils beschreiben. Das Paket `MuMIn` stellt die Funktion `r.squaredGLMM()` bereit, die wir auf unser Mixed Model anwenden können:
+
+```{r}
+r.squaredGLMM(int.lmer.new)
+```
+
+Hier werden uns jetzt folgerichtig zwei $R^2$-Werte angezeigt. Der erste, `R2m` (das steht für **marginal $R^2$**), ist die Proportion der Varianz in den Daten, die durch die Fixed Effects beschrieben wird, hier also 46%. Der zweite, `R2c` (für **conditional $R^2$**), ist die Proportion der Varianz in den Daten, die durch die Fixed Effects und Random Effects *zusammen* beschrieben wird. Mit 99.5% haben wir also quasi die gesamte Varianz in den Daten beschrieben! (Solch hohe Werte werden Sie in echten linguistischen Studien niemals sehen). Hieraus können wir ableiten, dass die Random Effects $99.5 - 46.1 = 53.4$ Prozent der Varianz beschreiben. Es war also für den Datensatz `int` sehr wichtig, dass wir die Random Effects im Modell hatten.
+
+Im Ergebnis des Modells fehlte außerdem ein Indikator für die Güte des Modells. Dies wurde uns bei `lm()` durch den F-Test angezeigt. Bei LMERs wird die Güte mit **Likelihood Ratio Tests** evaluiert. Dabei wird das verwendete Mixed Model mit einem anderen Mixed Model verglichen, bei dem ein Faktor eliminiert wurde. So kann eingeschätzt werden, ob durch das Weglassen eines Faktors die Güte des Modells sinkt oder gleich bleibt. Wie Likelihood Ratio Tests durchgeführt werden, geht jedoch über diesen Kurs hinaus.
 
